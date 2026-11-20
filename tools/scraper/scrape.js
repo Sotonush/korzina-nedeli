@@ -44,8 +44,11 @@ async function scrapeGlobus(items, log) {
       const r = await fetch(item.url, { headers: { 'user-agent': UA, 'accept-language': 'ru' } });
       if (!r.ok) { log.miss.push(`globus/${id} (HTTP ${r.status})`); continue; }
       const html = await r.text();
-      const m = html.match(/data-testid="price-text"[^>]*>([\s\S]*?)<\/span><\/span>/);
-      accept(item, m ? num(m[1].replace(/<[^>]+>/g, '')) : NaN, log, `globus/${id}`);
+      // Цена самого товара стоит до первой карточки «похожих товаров»; если её там нет — товара нет в наличии.
+      const cut = html.indexOf('data-testid="product-card"');
+      const m = (cut > 0 ? html.slice(0, cut) : html).match(/data-testid="price-text"[^>]*>([\s\S]*?)<\/span><\/span>/);
+      if (!m) { log.miss.push(`globus/${id} (нет в наличии)`); continue; }
+      accept(item, num(m[1].replace(/<[^>]+>/g, '')), log, `globus/${id}`);
     } catch (e) { log.miss.push(`globus/${id} (${e.message})`); }
     await new Promise(r => setTimeout(r, 400)); // бережно к сайту
   }
