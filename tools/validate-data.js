@@ -16,7 +16,16 @@ const PRICES = pctx.__P;
 const errors = [];
 const err = (m) => errors.push(m);
 
-const REQUIRED = 'chicken_breast chicken_thigh beef mince mutton turkey fish tuna eggs milk kefir tvorog yogurt cheese smetana butter rice rice_long buckwheat oats pasta noodles bulgur lentils chickpeas beans flour bread lepeshka lavash potato onion carrot cabbage sauerkraut tomato cucumber pepper zucchini pumpkin broccoli mushrooms garlic greens apple banana berries lemon dried_fruit nuts oil tomato_paste soy_sauce honey peanut_butter'.split(' ');
+const REQUIRED = 'chicken_breast chicken_thigh beef mince mutton turkey fish tuna eggs milk kefir tvorog yogurt cheese smetana butter rice rice_long buckwheat oats pasta noodles bulgur lentils chickpeas beans flour bread lepeshka lavash potato onion carrot cabbage sauerkraut tomato cucumber pepper zucchini pumpkin broccoli mushrooms garlic greens apple banana berries lemon dried_fruit nuts oil tomato_paste soy_sauce honey peanut_butter bread_rye'.split(' ');
+// Health rules shared with tools/tests/data.test.js
+const SALTY_ING = ['sauerkraut','soy_sauce','tuna','ayran','pelmeni','chuchvara']; // рассол, соевый соус, консервы, солёные молочные, готовые полуфабрикаты
+const WHITEFLOUR_ING = ['bread','lepeshka','lavash','pasta','noodles','kesme','flour','semolina','pelmeni','chuchvara'];
+const WHITEFLOUR_MIN_G = 15;
+const NEEDS = new Set(['blender','oven']);
+// Цена магазина за кг (или за упаковку, приведённую к кг) должна быть в 50–200% от ING — иначе это, скорее всего, не тот товар
+// (тот же порог использует ежедневный сборщик цен tools/scraper/scrape.js).
+const PRICE_LO = 0.5, PRICE_HI = 2;
+const VARIANTS = new Set(['chilled']); // STORE_ITEMS: ключи вида <ingId>@chilled — охлаждённая версия того же продукта
 const TAGS = new Set('meat chicken beef mutton turkey fish dairy egg gluten legume nuts peanut honey soy citrus mushroom'.split(' '));
 const CATS = new Set(['meat','dairy','grain','bread','veg','fruit','pantry']);
 const TYPES = new Set(['b','m','d','s']);
@@ -72,6 +81,22 @@ for (const r of RECIPES) {
   if (!Number.isInteger(r.yield) || r.yield <= 0) err(`${r.id}: yield ${r.yield}`);
   if (!Number.isInteger(r.keeps) || r.keeps < 0 || r.keeps > 3) err(`${r.id}: keeps ${r.keeps}`);
   if (r.prep !== undefined && (typeof r.prep !== 'string' || !r.prep.trim())) err(`${r.id}: prep must be non-empty string`);
+  if (r.needs !== undefined && (!Array.isArray(r.needs) || !r.needs.length || r.needs.some(n => !NEEDS.has(n)) || new Set(r.needs).size !== r.needs.length)) err(`${r.id}: needs must be a non-empty array of 'blender'|'oven'`);
+  if (r.batch !== undefined && (typeof r.batch !== 'string' || r.batch.trim().length < 10)) err(`${r.id}: batch must be a non-empty tip string`);
+  if (r.side !== undefined && r.side !== true) err(`${r.id}: side must be true or absent`);
+  if (Array.isArray(r.flags)) {
+    const salt = SALTY_ING.filter(i => r.ing[i]);
+    if (salt.length && !r.flags.includes('salty')) err(`${r.id}: contains ${salt.join(', ')} but no 'salty' flag`);
+    const wf = WHITEFLOUR_ING.reduce((a, i) => a + (r.ing[i] || 0), 0);
+    if (wf >= WHITEFLOUR_MIN_G && !r.flags.includes('whiteflour')) err(`${r.id}: ${wf} g of white flour products but no 'whiteflour' flag`);
+    if (r.side && (r.flags.includes('salty') || r.flags.includes('whiteflour'))) err(`${r.id}: side salad must not be salty/whiteflour`);
+  }
+  const allSteps = (r.steps || []).join(' ');
+  const needs = r.needs || [];
+  if (/ds*°C/.test(allSteps) && !needs.includes('oven')) err(`${r.id}: bakes at °C but needs has no 'oven'`);
+  if (needs.includes('oven') && !/°C|духовк/.test(allSteps)) err(`${r.id}: needs 'oven' but steps never use the oven`);
+  if (/пробейте блендером|пюрируйте/i.test(allSteps) && !needs.includes('blender')) err(`${r.id}: purée step but needs has no 'blender'`);
+  if (needs.includes('blender') && !/блендер/i.test(allSteps)) err(`${r.id}: needs 'blender' but steps never use it`);
   if (!Array.isArray(r.flags)) err(`${r.id}: flags missing`);
   else {
     for (const f of r.flags) if (!FLAGS.has(f)) err(`${r.id}: bad flag ${f}`);
@@ -181,6 +206,15 @@ const savouryB = RECIPES.filter(r => r.types.includes('b') && !r.flags.includes(
 console.log(`light mains/dinners (no flags, fat ≤ 20 g): ${lightMains.length}; savoury breakfasts (not sweet, not whiteflour): ${savouryB.length}`);
 if (lightMains.length < 10) err('fewer than 10 mains/dinners with empty flags and fat ≤ 20 g');
 if (savouryB.length < 4) err('fewer than 4 breakfasts that are neither sweet nor whiteflour');
+// быстрые перекусы: без подготовки с вечера и не дольше 15 минут, сладкие и несладкие
+const quickSnacks = RECIPES.filter(r => r.types.includes('s') && r.time <= 15 && !r.prep);
+const qSweet = quickSnacks.filter(r => r.flags.includes('sweet')).length, qSavoury = quickSnacks.length - qSweet;
+console.log(`quick snacks (≤15 min, no prep): ${quickSnacks.length} (sweet ${qSweet}, not sweet ${qSavoury})`);
+if (quickSnacks.length < 10 || qSweet < 3 || qSavoury < 3) err('need ≥10 quick snacks (≤15 min, no prep) with ≥3 sweet and ≥3 not sweet');
+const sides = RECIPES.filter(r => r.side);
+console.log(`soup sides (side:true): ${sides.map(r => r.id).join(', ')}`);
+if (sides.length < 2) err('need ≥2 side salads (side:true) to serve with soups');
+console.log(`needs: blender ${RECIPES.filter(r => (r.needs||[]).includes('blender')).length}, oven ${RECIPES.filter(r => (r.needs||[]).includes('oven')).length}; batch tips: ${RECIPES.filter(r => r.batch).length}`);
 const soups = RECIPES.filter(r => r.soup);
 console.log(`soups: ${soups.length} (${soups.map(r => r.id).join(', ')})`);
 const baseCount = {}; for (const r of RECIPES) baseCount[r.base] = (baseCount[r.base] || 0) + 1;
@@ -196,7 +230,10 @@ for (const [st, items] of Object.entries(PRICES.items)) {
   for (const [id, it] of Object.entries(items)) {
     storeCount++;
     const k = `${st}/${id}`;
-    if (!ING[id]) { err(`${k}: id not in ING`); continue; }
+    const [base, variant] = id.split('@');
+    if (!ING[base]) { err(`${k}: id not in ING`); continue; }
+    if (variant !== undefined && !VARIANTS.has(variant)) { err(`${k}: unknown variant @${variant}`); continue; }
+    if (variant === 'chilled' && (ING[base].cat !== 'meat' || !/охл/i.test(it.name || ''))) err(`${k}: @chilled must be a meat product titled «охл…» (${it.name})`);
     if (typeof it.name !== 'string' || !it.name.trim()) err(`${k}: name`);
     if (typeof it.url !== 'string' || !/^https:\/\//.test(it.url)) err(`${k}: url`);
     if (!(it.size === 'w' || (typeof it.size === 'number' && it.size > 0))) err(`${k}: size ${it.size}`);
@@ -208,15 +245,20 @@ for (const [st, items] of Object.entries(PRICES.items)) {
     const m = it.name.match(/(\d+(?:[.,]\d+)?)\s*(кг|г|гр|мл|л)(?![а-яa-z])/i);
     if (m && it.size !== 'w' && !/шт/i.test(it.name.slice(m.index - 3, m.index))) {
       let g = parseFloat(m[1].replace(',', '.')); const u = m[2].toLowerCase(); if (u === 'кг' || u === 'л') g *= 1000;
-      const expect = (ING[id].unit === 'ml' && id === 'oil') ? g * 0.92 : g;
+      const expect = (ING[base].unit === 'ml' && base === 'oil') ? g * 0.92 : g;
       if (Math.abs(expect - it.size) / expect > 0.1) err(`${k}: size ${it.size} but title says ${m[0]}`);
     }
-    const ing = ING[id];
+    const ing = ING[base];
     const kg = perKg(it.size, it.price), ref = perKg(ing.sale, ing.price);
-    if (kg / ref < 0.33 || kg / ref > 3) err(`${k}: ${Math.round(kg)} сом/кг is far from ING ${Math.round(ref)} сом/кг (${it.name})`);
+    if (kg / ref < PRICE_LO || kg / ref > PRICE_HI) err(`${k}: ${Math.round(kg)} сом/кг is outside ${PRICE_LO*100}–${PRICE_HI*100}% of ING ${Math.round(ref)} сом/кг — wrong product or pack? (${it.name})`);
     if (id === 'eggs' && it.size !== 550) err(`${k}: eggs must be a 10-pc pack (size 550)`);
   }
 }
+// ржаной хлеб нужен как добавка к супу для диабетиков — должен продаваться минимум в двух магазинах
+const ryeIn = Object.keys(PRICES.items).filter(st => PRICES.items[st].bread_rye);
+if (ryeIn.length < Math.min(2, Object.keys(PRICES.items).length)) err(`bread_rye has store prices only in: ${ryeIn.join(', ') || 'none'}`);
+const chilled = Object.entries(PRICES.items).flatMap(([st, v]) => Object.keys(v).filter(id => id.includes('@')).map(id => st + '/' + id));
+console.log(`variants: ${chilled.join(', ') || 'none'}`);
 console.log(`store items: ${storeCount} (${Object.entries(PRICES.items).map(([s, v]) => s + ' ' + Object.keys(v).length).join(', ')}), date ${PRICES.date}`);
 
 if (errors.length) { console.log('\nERRORS:'); errors.forEach(e => console.log(' - ' + e)); process.exit(1); }
