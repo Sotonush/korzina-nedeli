@@ -1,0 +1,13 @@
+# Корзина недели
+
+Приложение для телефона: меню на неделю и список покупок в магазинах Бишкека под цель, БЖУ, бюджет, семью и аллергии.
+
+- Открыть и установить: https://sotonush.github.io/korzina-nedeli/ (iPhone: Safari → «Поделиться» → «На экран Домой»; Android: Chrome → «Установить приложение»).
+- Цены: Глобус (globus-online.kg), Азия и SPAR (Glovo, «цены как в заведении»). Проверяются автоматически каждый день в 07:00 по Бишкеку (`.github/workflows/prices.yml`, `tools/scraper/scrape.js`) и сохраняются в `docs/prices.json`.
+- Личные данные (профиль, вес, отметки) хранятся только на телефоне пользователя.
+
+## Разработка
+
+- Исходники: `src/` (shell.html, app.js, data.js, prices.js — стартовые цены).
+- Сборка сайта: `node tools/build-web.js` → `docs/`.
+- Проверки: `node tools/test.js`, `node tools/validate-data.js`.

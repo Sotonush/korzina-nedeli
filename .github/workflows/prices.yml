@@ -1,0 +1,30 @@
+name: Проверка цен
+on:
+  schedule:
+    - cron: '0 1 * * *'   # каждый день в 07:00 по Бишкеку
+  workflow_dispatch:       # кнопка «Run workflow» для ручного запуска
+permissions:
+  contents: write
+concurrency: prices
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Установить браузер-робота
+        working-directory: tools/scraper
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Проверить цены
+        env:
+          NODE_PATH: tools/scraper/node_modules
+        run: node tools/scraper/scrape.js
+      - name: Сохранить новые цены
+        run: |
+          git config user.name "price-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/prices.json
+          if git diff --cached --quiet; then echo "Цены не изменились"; else git commit -m "Цены на $(date -u +%F)" && git push; fi
