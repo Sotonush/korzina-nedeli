@@ -8,6 +8,6 @@
 
 ## Разработка
 
-- Исходники: `src/` (shell.html, app.js, data.js, prices.js — стартовые цены).
+- Исходники: `src/` — shell.html (вёрстка и стили), js/01–06 (логика по частям: основа, подбор меню, корзина, формы, экраны, рендер), data.js (продукты и рецепты), prices.js (стартовые цены).
 - Сборка сайта: `node tools/build-web.js` → `docs/`.
 - Проверки: `node tools/test.js`, `node tools/validate-data.js`.

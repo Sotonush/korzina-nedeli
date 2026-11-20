@@ -14,7 +14,7 @@ const headPart = shell.slice(0, cut)
   .replace('/*@CSS@*/', () => rd('src/progress.css'));
 const bodyPart = shell.slice(cut)
   .replace('/*@DATA@*/', () => [rd('src/data.js'), rd('src/prices.js')].join('\n'))
-  .replace('/*@APP@*/', () => [rd('src/app.js'), rd('src/progress.js'), ';render();'].join('\n'));
+  .replace('/*@APP@*/', () => [require('./sources').appSource(), ';render();'].join('\n'));
 
 const live = `<script>
 // Свежие цены из prices.json (обновляются автоматически раз в день).
@@ -45,7 +45,9 @@ ${live}
 `;
 const version = crypto.createHash('sha1').update(html).digest('hex').slice(0, 10);
 fs.writeFileSync(path.join(out, 'index.html'), html);
-fs.writeFileSync(path.join(out, 'sw.js'), rd('web/sw.js').replace('__BUILD__', version));
+const sw = rd('web/sw.js');
+if (!sw.includes('__BUILD__')) throw new Error('В web/sw.js нет метки __BUILD__ для версии');
+fs.writeFileSync(path.join(out, 'sw.js'), sw.split('__BUILD__').join(version));
 fs.copyFileSync(path.join(root, 'web/manifest.webmanifest'), path.join(out, 'manifest.webmanifest'));
 for (const f of fs.readdirSync(path.join(root, 'web/icons'))) fs.copyFileSync(path.join(root, 'web/icons', f), path.join(out, 'icons', f));
 fs.writeFileSync(path.join(out, '.nojekyll'), '');

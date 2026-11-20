@@ -9,10 +9,11 @@ const ctx={console,Math,JSON,Date,Intl,setTimeout,clearTimeout,
 vm.createContext(ctx);
 const rd=f=>{const p=path.isAbsolute(f)?f:path.join(root,f);return fs.existsSync(p)?fs.readFileSync(p,'utf8'):''};
 const pricesFile=process.env.PRICES||'src/prices.js';
-const code=[rd('src/data.js'),rd(pricesFile),rd('src/app.js'),rd('src/progress.js')].join('\n')+
-`\n;globalThis.T={get state(){return state},set state(v){state=v},get SD(){return SD},defaults,migrate,generatePlan,computeCart,servings,addonsFrom,pool,poolFor,RM,ING,RECIPES,
+const code=[rd('src/data.js'),rd(pricesFile),require('./sources').appSource()].join('\n')+
+`\n;globalThis.T={get state(){return state},set state(v){state=v},get SD(){return SD},get RAWP(){return typeof STORE_ITEMS!=='undefined'?{date:PRICES_DATE,stores:STORE_INFO,items:STORE_ITEMS}:null},defaults,migrate,generatePlan,computeCart,servings,addonsFrom,pool,poolFor,RM,ING,RECIPES,
 viewMenu,viewCart,viewProfile,viewProgress,viewOnboarding,viewSheet,viewReplace,viewConfirm,STEPS,SECS,ui,ACT,regenerate,swapMeal,enforcePlan,smartUpdate,replaceOptions,pickReplace,
-personKcal,targets,filterCtx,resetCaches,applyLivePrices,isWk,keepsOf,hasF,honeyCentred,diffOf,QUICK_LIM,shareText,qtyText,render,genSetup,activeStores,buyIn};`;
+personKcal,targets,filterCtx,resetCaches,applyLivePrices,isWk,keepsOf,hasF,honeyCentred,diffOf,QUICK_LIM,shareText,qtyText,render,genSetup,activeStores,buyIn,
+isSoup,isAdult,plateG,yieldOf,dayTotals,forecast,menuKcal,maintKcal,storeItem,pairTotals,needText,unitPriceText,stepText,twoDay,twoDayText,fmtD,heavyDinner,kaymakStyle,baseOf,fruitIds,premOf,capTips,childKcal,summerIds,dropUnknown};`;
 vm.runInContext(code,ctx);
 const T=ctx.T;
 let fails=0,checks=0;
@@ -34,7 +35,7 @@ function variety(plan,lo){ // соседние дни и не больше 2 р�
     const nx=plan[d+1];if(nx)for(const s2 in nx){if(nx[s2]===id&&!(s2==='l'&&lo[d+1]))near++;}}});
   return {max:Math.max(0,...Object.values(cnt)),near};
 }
-const dayProt=(plan,lo)=>{const sv=T.servings(plan,lo,false);return plan.map((_,d)=>sv.filter(x=>x.d===d).reduce((a,x)=>a+x.who.filter(w=>w.i===0).reduce((b,w)=>b+x.r.P*w.m,0),0));};
+const dayProt=(plan,lo)=>{const sv=T.servings(plan,lo,false);return plan.map((_,d)=>sv.filter(x=>x.d===d&&x.r).reduce((a,x)=>a+x.who.filter(w=>w.i===0).reduce((b,w)=>b+x.r.P*w.m,0),0));};
 function run(name,mut){
   fresh(mut);
   const t0=Date.now();T.regenerate(true);const ms=Date.now()-t0;
@@ -130,10 +131,10 @@ for(const [nm,mut] of [['соло 1500',s=>{s.cap=1500}],['соло 2500',s=>{s.
 console.log('\n== Белок: цель от веса и добавки ==');
 fresh(s=>{s.people[0].goal='lose';s.people[0].weight=80});T.regenerate(true);
 {const tg=T.targets(T.state.people[0]);ok(Math.abs(tg.p-128)<1,'белок 1,6 г/кг x 80 = 128, а получилось '+tg.p);
- const add=T.servings().filter(x=>x.add);const c=T.computeCart();
+ const add=T.servings().filter(x=>x.add&&!x.bread);const c=T.computeCart();
  console.log('  цель',Math.round(tg.p),'г | добавок за неделю',add.length,add.slice(0,3).map(a=>a.add.t).join('; '));
  if(add.length)ok(c.items.some(x=>x.dishes.includes('добрать белок')),'добавки не попали в корзину');
- T.state.autoProt=false;ok(!T.servings().some(x=>x.add),'добавки остались при выключенном переключателе');}
+ T.state.autoProt=false;ok(!T.servings().some(x=>x.add&&!x.bread),'добавки остались при выключенном переключателе');}
 
 console.log('\n== Нелюбимое у одного человека ==');
 fresh(s=>{s.family=true;s.people.push({id:'bk',kind:'adult',name:'Бакыт',sex:'m',age:35,height:178,weight:85,act:1.55,goal:'keep',dislikes:['chicken','fish']})});T.regenerate(true);
@@ -169,9 +170,12 @@ if(T.SD){
   T.state.split=true;T.state.stores2=[k[0],k[1]];T.resetCaches();c=T.computeCart();
   ok(c.stores.length===2,'режим «Где дешевле» не включился');
   const sub=Object.values(c.sub).reduce((a,b)=>a+b,0);ok(Math.abs(sub-c.pay)<1,'сумма по магазинам не равна итогу');
-  // каждый товар попал в магазин, где он дешевле
-  const worse=c.items.filter(x=>{const other=c.stores.find(s=>s!==x.store);return T.buyIn(other,x.id,x.need).cost<x.cost-.01;});
-  ok(worse.length===0,'товары не в самом дешёвом магазине: '+worse.map(x=>x.id).join(','));
+  // во второй магазин — только при экономии >= 30 сом или 10%, в первом не осталось того, что заметно дешевле во втором
+  const [m1,m2]=c.stores,has=(k,id)=>!!(T.SD.items[k]&&T.SD.items[k][id]&&+T.SD.items[k][id].price>0);
+  const badMove=c.items.filter(x=>x.store===m2&&has(m1,x.id)&&(()=>{const a=T.buyIn(m1,x.id,x.need).cost,sv=a-x.cost;return !(sv>=30||sv>=a*.1);})());
+  const missed=c.items.filter(x=>x.store===m1&&has(m2,x.id)&&(()=>{const b=T.buyIn(m2,x.id,x.need).cost,sv=x.cost-b;return sv>=30||(sv>0&&sv>=x.cost*.1);})());
+  ok(badMove.length===0,'перенесено во 2-й магазин без выгоды: '+badMove.map(x=>x.id).join(','));
+  ok(missed.length===0,'не перенесено, хотя выгодно: '+missed.map(x=>x.id).join(','));
   ok(T.viewCart().includes('store-sec'),'корзина не разделена по магазинам');
   console.log('  по магазинам',Object.entries(c.sub).map(([s,v])=>s+' '+Math.round(v)).join(' / '),'| в каталоге',c.items.filter(x=>x.o.item).length,'из',c.items.length);
   T.state.split=false;T.state.store='nonexistent';ok(T.applyLivePrices(live),'applyLivePrices не принял данные');
@@ -201,6 +205,181 @@ fresh(s=>{s.big=true;s.family=true;s.people.push({id:'n',kind:'child',name:'Ну
 // прогресс веса
 fresh(s=>{s.people[0].target=62});T.regenerate(true);
 {T.state.wlog=[{d:'2026-11-01',w:72},{d:'2026-11-10',w:71.2},{d:'2026-11-20',w:70.4}];const h=T.viewProgress();ok(h.includes('<polyline'),'нет графика веса');ok(/кг в неделю/.test(h)&&/цель к/.test(h),'нет прогноза «кг в неделю, цель к»');}
+
+// ======================= Новые запросы клиента (12 пунктов) =======================
+const famKid=s=>{s.family=true;s.people.push({id:'k1',kind:'child',name:'Арсен',sex:'m',age:6,dislikes:[]})};
+const anyR=(pl,lo,f)=>{const out=[];pl.forEach((day,d)=>{for(const s in day){const r=T.RM[day[s]];if(r&&!(s==='l'&&lo[d])&&f(r,s,d))out.push(d+s+':'+r.id);}});return out;};
+
+console.log('\n== 1. Суп: порция и хлеб ==');
+{const soups=T.RECIPES.filter(r=>T.isSoup(r));ok(soups.length>=3,'супов найдено мало: '+soups.length);
+ let seen=0,bread=0,badA=0,badC=0;
+ for(let seed=0;seed<12&&seen<6;seed++){fresh(s=>{famKid(s);s.seed=seed*131;});T.state.seed=seed*131;T.regenerate(false);
+  const opts=T.poolFor('l',T.isWk(2)).filter(r=>T.isSoup(r));if(opts.length)T.pickReplace(2,'l',opts[seed%opts.length].id);
+  const sv=T.servings();
+  for(const x of sv){if(!x.r||!T.isSoup(x.r))continue;seen++;for(const w of x.who){const ml=T.plateG(x.r,w.m),child=!T.isAdult(T.state.people[w.i]);
+    if(child&&(ml>300||ml<240))badC++;if(!child&&(ml>450||ml<340))badA++;}}
+  bread+=sv.filter(x=>x.bread).length;
+  const c=T.computeCart();if(sv.some(x=>x.bread))ok(c.items.some(x=>x.dishes.includes('хлеб к обеду')),'хлеб к супу не попал в корзину');
+  T.state.day=2;const h=T.viewMenu();if(sv.some(x=>x.bread&&x.d===2))ok(/\+ (хлеб|лепёшка|лаваш) \d+ г/.test(h),'нет строки «+ хлеб N г» в меню');
+ }
+ ok(seen>0,'суп ни разу не попал в меню');ok(badA===0,'взрослая порция супа вне 350–450 мл: '+badA);ok(badC===0,'детская порция супа вне 250–300 мл: '+badC);
+ ok(bread>0,'хлеб к супу ни разу не добавлен');
+ const x=T.servings().find(y=>y.r&&!y.alt);const m=x.who[0].m;ok(Math.abs(T.plateG(x.r,m)-T.yieldOf(x.r)*m)<=5,'граммы на тарелке не совпадают с рецептом');
+ console.log('  тарелок супа',seen,'| добавок хлеба',bread);}
+
+console.log('\n== 2. Калории дня и прогноз ==');
+{let worst=0,over=0,n=0;
+ const scen=[['похудение',s=>{}],['похудение 3 приёма',s=>{s.meals=3}],['семья',s=>{famKid(s);s.people.push({id:'a2',kind:'adult',sex:'m',age:40,height:180,weight:95,act:1.55,goal:'lose',dislikes:[]})}],['набор',s=>{Object.assign(s.people[0],{sex:'m',weight:80,height:182,goal:'gain'})}],['лимит+эконом',s=>{s.cap=1800;s.mode='eco'}],['2 дня',s=>{s.cook2=true}]];
+ for(const [nm,mut] of scen)for(let seed=0;seed<4;seed++){fresh(s=>{mut(s);s.seed=seed*7+1});T.state.seed=seed*7+1;T.regenerate(false);
+  const sv=T.servings(),E=T.state.family?T.state.people:[T.state.people[0]];
+  for(let d=0;d<7;d++)E.forEach((p,i)=>{const t=T.dayTotals(d,sv,i),K=T.personKcal(p),r=t.k/K;n++;worst=Math.max(worst,Math.abs(r-1));if(p.goal==='lose'&&r>1.05)over++;if(Math.abs(r-1)>.05)console.log('   ',nm,'день',d,p.id,Math.round(t.k),'/',K);});}
+ ok(worst<=.05,'калории дня отклоняются от нормы больше 5%: '+(worst*100).toFixed(1)+'%');ok(over===0,'похудение: день выше нормы +5%: '+over);
+ fresh(s=>{s.people[0].goal='lose';s.people[0].weight=95;s.autoProt=true});T.regenerate(true);
+ {const sv=T.servings(),K=T.personKcal(T.state.people[0]);const adds=sv.filter(x=>x.add&&!x.bread);
+  ok([0,1,2,3,4,5,6].every(d=>T.dayTotals(d,sv,0).k<=K*1.05),'с добавками для белка день выше +5%');
+  console.log('  худшее отклонение',(worst*100).toFixed(1)+'%','по',n,'дням | добавок при весе 95 кг',adds.length);}
+ T.state.day=0;const h=T.viewMenu();ok(!/bar-item off/.test(h)||/нормы на/.test(h),'нет подписи «больше/меньше нормы на …»');
+ const fc=T.forecast(),mk=T.menuKcal(),p=T.state.people[0];
+ ok(mk>0&&Math.abs(fc.perWeek-(mk-T.maintKcal(p))*7/7700)<1e-9,'прогноз не по калориям меню');ok(/По меню/.test(T.viewProgress()),'в «Прогрессе» нет пояснения «По меню …»');
+ console.log('  меню в среднем',Math.round(mk),'ккал, норма',T.personKcal(p),'| прогноз',fc.rate);}
+
+console.log('\n== 3 и 8. Магазины: наличие, порог, пары ==');
+if(T.RAWP)T.applyLivePrices(T.RAWP); // вернуть настоящие магазины после проверки applyLivePrices
+if(T.SD&&T.SD.keys.length>=2){
+ fresh();T.regenerate(true);const k=T.SD.keys;
+ for(const pair of [[k[0],k[1]],[k[1],k[k.length-1]]]){T.state.split=true;T.state.stores2=pair.slice();T.resetCaches();const c=T.computeCart();
+  const wrong=c.items.filter(x=>x.store&&!T.storeItem(x.store,x.id));ok(wrong.length===0,'продукт в магазине, где его нет: '+wrong.map(x=>x.store+':'+x.id).join(','));
+  const lost=c.items.filter(x=>!x.store&&pair.some(s=>T.storeItem(s,x.id)));ok(lost.length===0,'есть в магазине, но попал в «примерные»: '+lost.map(x=>x.id).join(','));
+  const ap=c.items.filter(x=>!x.store);if(ap.length)ok(T.viewCart().includes('Цена примерная — уточните в магазине'),'нет группы «Цена примерная»');
+  ok(T.viewCart().includes('сом/кг')||T.viewCart().includes('сом/л'),'нет цены за кг/л');
+  console.log('  ',pair.join('+'),'| примерных',ap.length,ap.map(x=>x.id).join(' '));}
+ const pt=T.pairTotals();ok(pt.length===k.length*(k.length-1)/2,'не все пары магазинов');ok(pt.every((p,i)=>!i||p.total>=pt[i-1].total),'пары не по возрастанию');
+ console.log('  пары:',pt.map(p=>p.stores.join('+')+' '+Math.round(p.total)).join(' · '));
+ if(k.length>=3){T.state.stores2=[k[0],k[1]];T.ACT.store2(k[2]);ok(T.state.stores2.length===2&&T.state.stores2.includes(k[0])&&T.state.stores2.includes(k[1]),'третий магазин молча выкинул выбранный');
+  ok(T.ui.pick&&T.ui.pick.opts.length===2,'нет вопроса, какой магазин заменить');T.ACT.pickSet('0');ok(T.state.stores2.includes(k[2])&&!T.state.stores2.includes(k[0]),'замена магазина не применилась');
+  T.ACT.pair(pt[0].stores.join(','));ok(T.state.stores2.join()===pt[0].stores.join(),'пара не выбралась');}
+ T.state.split=false;T.state.store=k[k.length-1];T.resetCaches();const c1=T.computeCart();
+ ok(c1.items.every(x=>x.store?!!T.storeItem(x.store,x.id):true),'один магазин: продукт без данных отнесён в магазин');
+ const eg=c1.items.find(x=>x.id==='eggs');if(eg)ok(/^\d+ × 10 шт$/.test(T.qtyText(eg))&&/шт/.test(T.needText(eg)),'яйца не в «N × 10 шт»: '+T.qtyText(eg));
+ const ml=c1.items.find(x=>T.ING[x.id].unit==='ml'&&x.o.size!=='w');if(ml)ok(/(мл|л)/.test(T.qtyText(ml))&&/сом\/л/.test(T.unitPriceText(ml)),'жидкость не в мл/л: '+T.qtyText(ml));
+}else console.log('  нет цен магазинов — пропуск');
+
+console.log('\n== 4. Шаги рецепта и «на 2 дня» ==');
+{const st=(t,h)=>T.stepText(t,h);
+ ok(st('Залейте [[160|мл]] кипятка',1)==='Залейте 160 мл кипятка','токен ×1: '+st('Залейте [[160|мл]] кипятка',1));
+ ok(st('Залейте [[160|мл]] кипятка',2)==='Залейте 320 мл кипятка','токен ×2');
+ ok(st('Залейте [[160|мл]] кипятка',9.4)==='Залейте 1,5 л кипятка','мл → л: '+st('Залейте [[160|мл]] кипятка',9.4));
+ ok(st('[[300|г]] муки',4)==='1,2 кг муки','г → кг: '+st('[[300|г]] муки',4));
+ ok(st('[[1|ст. л.]] масла',1.3)==='1,5 ст. л. масла','ст. л. до 0,5: '+st('[[1|ст. л.]] масла',1.3));
+ ok(st('[[1|шт]] луковица',.4)==='0,5 шт луковица','шт минимум 0,5: '+st('[[1|шт]] луковица',.4));
+ ok(st('Варите [[20|мин]]',3)==='Варите 20 мин','минуты не масштабируются');
+ ok(st('[[37|г]] соли',3)==='110 г соли','округление граммов: '+st('[[37|г]] соли',3));
+ ok(!/\[\[|\]\]/.test(st('Битый [[токен',2)+st('[[abc|г]]',2)),'сырые скобки токена видны');
+ fresh();T.regenerate(true);let raw=0;T.RECIPES.forEach(r=>(r.steps||[]).forEach(t=>{if(/\[\[|\]\]/.test(T.stepText(t,1.7)))raw++;}));ok(raw===0,'в рецептах остались сырые токены: '+raw);
+ fresh(s=>{s.cook2=true;famKid(s)});T.regenerate(true);
+ const lo=T.state.lo,dd=lo.indexOf(true)-1;ok(dd>=0,'нет ужина на 2 дня');
+ if(dd>=0){const sv=T.servings(),t=T.twoDay(dd,sv),txt=T.twoDayText(t);T.state.day=dd;const h=T.viewMenu();
+  ok(/^Готовим \d+,\d порции: \d+,\d сегодня \+ \d+,\d завтра$/.test(txt),'формат «Готовим N порции: a сегодня + b завтра»: '+txt);
+  ok(Math.abs(t.today+t.tom-t.total)<1e-9,'сегодня + завтра ≠ всего');ok(h.includes(txt),'в карточке ужина нет '+txt);
+  T.ui.sheet={d:dd,s:'d'};const sh=T.viewSheet();T.ui.sheet=null;ok(sh.includes(txt),'в рецепте нет тех же чисел');
+  T.state.day=dd+1;ok(T.viewMenu().includes(T.fmtD(t.tom)+' порции из вчерашнего ужина'),'в «Остатках» нет тех же порций');
+  console.log('  ',txt);}}
+
+console.log('\n== 5. Здоровье: ужин, недельные лимиты, жиры ==');
+{let heavyD=0,wf=0,fat=0,sal=0,kay=0,fatDays=0,n=0;
+ for(let seed=0;seed<10;seed++)for(const h of [{diab:true,bp:false},{diab:false,bp:true},{diab:true,bp:true}]){
+  fresh(s=>{s.health=Object.assign({},h);s.seed=seed*313;s.mode=['eco','opt','comfort'][seed%3];s.cook2=seed%2===0});T.state.seed=seed*313;T.regenerate(false);n++;
+  const pl=T.state.plan,lo=T.state.lo;
+  heavyD+=pl.filter(d=>d.d&&T.heavyDinner(T.RM[d.d])).length;
+  const cnt=f=>anyR(pl,lo,r=>T.hasF(r,f)).length;
+  if(h.diab&&cnt('whiteflour')>2)wf++;if(h.bp&&cnt('fatty')>1)fat++;if(h.bp&&cnt('salty')>0)sal++;if(anyR(pl,lo,r=>T.kaymakStyle(r)).length>1)kay++;
+  const sv=T.servings(),tg=T.targets(T.state.people[0]);for(let d=0;d<7;d++)if(T.dayTotals(d,sv,0).f>tg.f*1.1+.5)fatDays++;
+ }
+ ok(heavyD===0,'тяжёлое блюдо на ужин при флаге здоровья: '+heavyD);
+ ok(['zharkop','kartoshka_myaso','borsch'].every(id=>!T.RM[id]||T.heavyDinner(T.RM[id])),'жаркоп/тушёная картошка/борщ не считаются тяжёлыми на ужин');
+ ok(wf===0,'диабет: белая мука больше 2 раз в неделю ('+wf+' недель)');ok(fat===0,'давление: жирное больше 1 раза ('+fat+')');ok(sal===0,'давление: солёное в меню ('+sal+')');
+ ok(kay===0,'лепёшка с каймаком чаще раза в неделю ('+kay+')');ok(fatDays===0,'жиры дня выше нормы +10%: '+fatDays+' дней');
+ fresh();T.regenerate(true);T.ACT.health('diab');ok(T.state.macro!=='lowcarb','макросы переключились без спроса');
+ let h=T.viewMenu();ok(h.includes('Меньше углеводов')&&h.includes('data-act="lowcarb"'),'нет предложения «Меньше углеводов»');
+ const cards=(h.match(/<article class="meal /g)||[]).length,carbs=(h.match(/Углеводы <b>/g)||[]).length;ok(carbs>0&&carbs>=cards,'углеводы не у каждого блюда: '+carbs+'/'+cards);
+ T.ACT.lowcarb();ok(T.state.macro==='lowcarb'&&!T.viewMenu().includes('data-act="lowcarb"'),'переключение «Меньше углеводов» не сработало');
+ fresh(s=>{s.health={diab:true,bp:true}});T.regenerate(true);ok(T.replaceOptions(2,'d').every(r=>!T.heavyDinner(r)),'в заменах ужина тяжёлое');
+ console.log('  недель проверено',n);}
+
+console.log('\n== 6. Разнообразие ==');
+{let dayRep=0,wkRep=0,fruit=0,snack=0,n=0,rep=0;const chk=()=>{const pl=T.state.plan,lo=T.state.lo,bw={},fw={},sw={};n++;
+  pl.forEach((day,d)=>{const bs=new Set();for(const s in day){const r=T.RM[day[s]];if(!r||(s==='l'&&lo[d]))continue;const b=T.baseOf(r);if(bs.has(b))dayRep++;bs.add(b);bw[b]=(bw[b]||0)+1;T.fruitIds(r).forEach(f=>fw[f]=(fw[f]||0)+1);if(s==='s')sw[r.id]=(sw[r.id]||0)+1;}});
+  wkRep+=Object.values(bw).filter(v=>v>3).length;fruit+=Object.values(fw).filter(v=>v>3).length;snack+=Object.values(sw).filter(v=>v>3).length;};
+ for(let seed=0;seed<8;seed++)for(const mode of ['eco','opt','comfort']){fresh(s=>{s.seed=seed*97+3;s.mode=mode});T.state.seed=seed*97+3;T.regenerate(false);chk();}
+ for(const cap of [1500,2200]){fresh(s=>{s.cap=cap;s.mode='eco'});T.regenerate(true);chk();}
+ fresh();T.regenerate(true);T.ACT.cuisine('eu');T.ACT.update();chk();
+ ok(dayRep===0,'одна основа дважды в день: '+dayRep);ok(wkRep===0,'основа чаще 3 раз в неделю: '+wkRep);ok(fruit===0,'фрукт чаще 3 раз в неделю: '+fruit);ok(snack===0,'перекус чаще 3 раз: '+snack);
+ fresh();T.regenerate(true);for(let d=0;d<7;d++)for(const s of ['b','l','d']){const day=T.state.plan[d],other=new Set(Object.keys(day).filter(x=>x!==s&&!(x==='l'&&T.state.lo[d])&&T.RM[day[x]]).map(x=>T.baseOf(T.RM[day[x]])));
+  if(T.replaceOptions(d,s).some(r=>other.has(T.baseOf(r))))rep++;}
+ ok(rep===0,'в заменах блюдо с той же основой, что уже есть в этот день: '+rep);
+ console.log('  меню проверено',n);}
+
+console.log('\n== 7. Студент: есть дома, эконом, подсказки к лимиту ==');
+{fresh();T.regenerate(true);let c=T.computeCart();const oil=c.items.find(x=>x.id==='oil');
+ const pant=c.items.filter(x=>x.pantry);ok(pant.length>0,'ничего не отмечено «есть дома» по умолчанию');
+ ok(pant.every(x=>x.home)&&Math.abs(c.total-c.items.filter(x=>!x.home).reduce((a,x)=>a+x.cost,0))<.01,'«есть дома» входит в сумму');
+ if(oil){ok(oil.home,'масло не отмечено «есть дома»');T.ACT.home('oil');c=T.computeCart();ok(!c.items.find(x=>x.id==='oil').home,'«купить» не вернул масло в сумму');T.ACT.home('oil');ok(T.computeCart().items.find(x=>x.id==='oil').home,'повторное нажатие не вернуло «есть дома»');}
+ ok(/Обычно есть дома: .+ — не учтены/.test(T.viewCart()),'нет пометки «Обычно есть дома: … — не учтены»');
+ console.log('  по умолчанию дома:',pant.map(x=>x.id).join(', '));
+ let prem=0;for(let seed=0;seed<5;seed++){fresh(s=>{s.mode='eco';s.seed=seed*5+2});T.state.seed=seed*5+2;T.regenerate(false);prem+=anyR(T.state.plan,T.state.lo,r=>T.premOf(r).length>0).length;}
+ ok(prem===0,'«Эконом»: дорогие продукты в меню: '+prem);
+ fresh(s=>{s.cap=900;s.mode='opt'});T.regenerate(true);c=T.computeCart();const tips=T.capTips(),h=T.viewMenu();
+ ok(c.total>900&&tips.length>0,'нет подсказок «Чтобы уложиться в лимит»');ok(h.includes('Чтобы уложиться в лимит:')&&/data-act="(pick|noSnack)"/.test(h),'подсказки без кнопок');
+ ok(tips.every(t=>t.save>=10),'подсказка без реальной экономии');
+ const sn=tips.find(t=>t.kind==='snack');if(sn){const before=c.total;T.ACT.noSnack(String(sn.d));const after=T.computeCart().total;ok(Math.abs(before-after-sn.save)<1,'экономия «убрать перекус» не совпала');
+  const sv=T.servings(),K=T.personKcal(T.state.people[0]);ok(Math.abs(T.dayTotals(sn.d,sv,0).k/K-1)<=.05,'без перекуса калории дня не в норме');ok(!sv.some(x=>x.d===sn.d&&x.s==='s'),'перекус остался');T.ACT.undo();ok(!T.state.noSnack[sn.d],'отмена не вернула перекус');}
+ T.state.mode='eco';T.state.split=true;T.state.stores2=T.SD?T.SD.keys.slice(0,2):[];const h2=T.viewMenu();ok(!h2.includes('data-act="tipEco"')&&!h2.includes('включить «Где дешевле»'),'советуем то, что уже включено');
+ console.log('  подсказок',tips.length,tips.map(t=>t.kind+' −'+Math.round(t.save)).join(', '));}
+
+console.log('\n== 9. Дети ==');
+{const kid=(sex,age,cact,w)=>T.childKcal({kind:'child',sex,age,cact,weight:w||''});
+ ok(kid('m',5,'mid')>=1300&&kid('m',5,'mid')<=1450&&kid('f',5,'mid')>=1250&&kid('f',5,'mid')<=1450,'4–6 лет ≈ 1300–1450: '+kid('m',5,'mid')+'/'+kid('f',5,'mid'));
+ ok(kid('m',8,'mid')>=1600&&kid('m',8,'mid')<=1800,'7–10 лет ≈ 1600–1800: '+kid('m',8,'mid'));
+ ok(kid('m',13,'mid')>=1900&&kid('m',13,'mid')<=2300&&kid('f',12,'mid')>=1800,'11–14 лет ≈ 1900–2300: '+kid('m',13,'mid'));
+ ok(kid('m',9,'low')<kid('m',9,'mid')&&kid('m',9,'mid')<kid('m',9,'high'),'активность ребёнка не влияет');
+ ok(kid('m',9,'mid')>kid('f',9,'mid'),'пол ребёнка не влияет');
+ const t=kid('m',9,'mid'),w=kid('m',9,'mid',45);ok(w!==t&&w<=t*1.2+10&&w>=t*.8-10,'вес ребёнка не учтён или вне ±20%');
+ const mg=T.migrate({v:2,onboarded:true,family:true,people:[{id:'x',kind:'adult',sex:'f',age:30,height:165,weight:70,act:1.375,goal:'keep'},{id:'c',kind:'child',sex:'m',age:7}],plan:null});
+ ok(mg.people[1].cact==='mid'&&mg.allergyWho&&typeof mg.allergyWho==='object','миграция ребёнка/allergyWho');
+ fresh(s=>{famKid(s);s.allergies=['nuts'];s.openSec='allergy'});T.ACT.allWho('nuts:k1');ok(T.state.allergyWho.nuts.includes('k1'),'«нельзя: Арсен» не сохраняется');
+ ok(T.viewProfile().includes('нельзя: Арсен'),'нет «нельзя: Арсен»');
+ T.state.openSec='family';ok(T.viewProfile().includes('p1-cact'),'нет активности ребёнка');
+ console.log('  5 лет м/д',kid('m',5,'mid'),kid('f',5,'mid'),'| 8 лет',kid('m',8,'mid'),'| 13 лет',kid('m',13,'mid'),'| 9 лет с весом 45',w);}
+
+console.log('\n== 10. Мелочи ==');
+{fresh();T.regenerate(true);let h=T.viewMenu();ok((h.match(/class="kc">ккал</g)||[]).length===7,'нет «ккал» под днями');
+ T.state.onboarded=false;T.state.step=0;h=T.viewOnboarding();ok(h.includes('Крупнее'),'кнопка «Аа» без текста «Крупнее»');T.state.big=true;ok(T.viewOnboarding().includes('Обычный'),'нет «Обычный» в крупном режиме');T.state.big=false;T.state.onboarded=true;
+ T.ui.replace={d:1,s:'l'};const rp=T.viewReplace();T.ui.replace=null;ok(/(дороже|дешевле) на \d|та же цена/.test(rp),'в замене нет разницы по цене');
+ T.state.dirty=true;T.state.tab='profile';h=T.viewProfile();ok(h.includes('Пересобрать неделю')&&!h.includes('Всё заново'),'нет «Пересобрать неделю»');
+ ok(h.includes('Удалить все данные')&&h.lastIndexOf('Удалить все данные')>h.lastIndexOf('acc-btn'),'«Удалить все данные» не внизу');
+ ok(!T.SECS.some(x=>x[0]==='reset'),'«Начать заново» осталось разделом');
+ fresh(s=>{s.cap=999999});T.regenerate(true);ok(!T.viewMenu().includes('Не укладываемся'),'баннер лимита при запасе');}
+
+console.log('\n== 12. Зимние овощи ==');
+{const S=T.summerIds();ok(S.size>0,'нет летних продуктов');
+ let st='2026-07-06';
+ const sg=()=>{let g=0;for(let seed=0;seed<6;seed++){fresh(s=>{s.seed=seed*41;s.start=st});T.state.seed=seed*41;T.regenerate(false);const sv=T.servings();for(const x of sv)if(x.r)for(const id in x.r.ing)if(S.has(id))g+=x.r.ing[id]*x.who.reduce((a,w)=>a+w.m,0);}return g;};
+ const summer=sg();st='2026-12-07';const winter=sg();
+ ok(winter<summer,'зимой тепличных овощей не меньше, чем летом: '+Math.round(winter)+' / '+Math.round(summer));
+ fresh(s=>{s.start='2026-12-07'});T.regenerate(true);const c=T.computeCart();if(c.items.some(x=>S.has(x.id)&&!x.home))ok(/зимой дорог/.test(T.viewCart()),'нет подсказки про дорогие зимой овощи');
+ console.log('  тепличных овощей за неделю: летом',Math.round(summer),'г, зимой',Math.round(winter),'г');}
+
+console.log('\n== 11. Офлайн (sw.js) ==');
+{const sw=rd('web/sw.js'),bw=rd('tools/build-web.js');
+ ok(sw.includes('__BUILD__')&&/__BUILD__/.test(bw),'версия SW не проставляется сборкой');
+ ok(/fonts\.googleapis\.com/.test(sw)&&/fonts\.gstatic\.com/.test(sw),'шрифты Google не кэшируются');
+ ok(/3000/.test(sw)&&/navigate/.test(sw),'нет таймаута 3 с для навигации');ok(/prices\.json/.test(sw),'нет prices.json network-first');
+ try{new vm.Script(sw);ok(true,'');}catch(e){ok(false,'sw.js с синтаксической ошибкой: '+e.message);}}
+
+console.log('\n== Старое сохранение и неизвестные блюда ==');
+{const old={v:2,onboarded:true,people:[{id:'x',kind:'adult',sex:'f',age:30,height:165,weight:70,act:1.375,goal:'lose'}],cart:{oil:{b:true}},plan:Array.from({length:7},()=>({b:'nonexistent_dish',l:'plov',d:'borsch',s:'kefir_banana'})),lo:[],stores2:['frunze'],tab:'menu'};
+ let st;try{st=T.migrate(old);T.state=st;T.resetCaches();T.dropUnknown(st);renderAll();T.computeCart();ok(true,'');}catch(e){ok(false,'старое сохранение с неизвестным блюдом упало: '+e.message);}
+ ok(st&&st.plan.every(d=>d.b!=='nonexistent_dish'),'неизвестное блюдо осталось');}
 
 console.log('\n== Скорость ==');
 fresh(s=>{s.family=true;s.cap=2500;s.cook2=true;s.people.push({id:'a',kind:'adult',sex:'m',age:35,height:178,weight:85,act:1.55,goal:'keep',dislikes:['fish']},{id:'b',kind:'child',sex:'f',age:7,dislikes:[]})});
