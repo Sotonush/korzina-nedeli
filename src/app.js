@@ -21,7 +21,7 @@ const MACROS = {
   lowcarb:{n:'Меньше углеводов',f:40},
   mass:{n:'Больше углеводов',f:22}
 };
-const ACTS = [[1.2,'Почти не двигаюсь'],[1.375,'Лёгкая активность, 1–3 тренировки'],[1.55,'Средняя, 3–5 тренировок'],[1.725,'Высокая, тренируюсь каждый день']];
+const ACTS = [[1.2,'Почти не двигаюсь'],[1.375,'Лёгкая: 1–3 трен. в нед.'],[1.55,'Средняя: 3–5 трен. в нед.'],[1.725,'Высокая: каждый день']];
 const STORES = {avg:'Средние цены по Бишкеку'};
 const STORE_RENAME = {frunze:'asia'};
 const MODES = {
@@ -654,11 +654,11 @@ function personCard(p, i){
   const dl = (p.dislikes||[]).map(k => DISLIKES[k] ? DISLIKES[k].n.toLowerCase() : '').filter(Boolean);
   return `<div class="person">
     <div class="person-h"><b>${p.name ? esc(p.name) + ' · ' : ''}${isChild ? 'Ребёнок' : 'Взрослый'} · ${fmt(personKcal(p))} ккал</b><button type="button" class="link-btn" data-act="rmPerson" data-v="${p.id}">Убрать</button></div>
-    <div class="grid2"><label class="field" for="p${i}-name"><span class="label">Имя</span><input class="input" id="p${i}-name" type="text" maxlength="24" data-bind="p.${i}.name" value="${esc(p.name)}" placeholder="${isChild?'Например, Нурик':'Например, Бакыт'}"></label>
+    <div class="grid2"><label class="field" for="p${i}-name"><span class="label">Имя</span><input class="input" id="p${i}-name" type="text" maxlength="24" data-bind="p.${i}.name" value="${esc(p.name)}" placeholder="${isChild?'Нурик':'Бакыт'}"></label>
     ${numField(`p${i}-age`,'Возраст',`p.${i}.age`,p.age,'лет',1,90)}</div>
     <div>${seg('psex', isChild ? [['f','Девочка'],['m','Мальчик']] : [['f','Женщина'],['m','Мужчина']], p.sex, i+':')}</div>
     ${isChild ? '' : `<div class="grid2">${numField(`p${i}-h`,'Рост',`p.${i}.height`,p.height,'см',120,220)}${numField(`p${i}-w`,'Вес',`p.${i}.weight`,p.weight,'кг',35,250)}</div>
-    <div class="grid2"><label class="field" for="p${i}-act"><span class="label">Активность</span>${actSelect(`p${i}-act`,`p.${i}.act`,p.act)}</label>
+    <div class="stack" style="gap:0.625rem"><label class="field" for="p${i}-act"><span class="label">Активность</span>${actSelect(`p${i}-act`,`p.${i}.act`,p.act)}</label>
     <label class="field" for="p${i}-goal"><span class="label">Цель</span><select class="select" id="p${i}-goal" data-bind="p.${i}.goal">${Object.entries(GOALS).map(([k,g])=>`<option value="${k}" ${p.goal===k?'selected':''}>${g.n}</option>`).join('')}</select></label></div>`}
     <button type="button" class="more-btn" data-act="pdisOpen" data-v="${p.id}" aria-expanded="${open}"><span>Не любит: ${dl.length ? esc(dl.join(', ')) : 'ничего'}</span>${IC.chev}</button>
     ${open ? `<div class="chips">${dk.map(k => `<button type="button" class="chip" data-act="pdis" data-v="${i}:${k}" ${pressed((p.dislikes||[]).includes(k))}>${IC.tick}${DISLIKES[k].n}</button>`).join('')}</div>

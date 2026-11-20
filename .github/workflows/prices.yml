@@ -27,4 +27,4 @@ jobs:
           git config user.name "price-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/prices.json
-          if git diff --cached --quiet; then echo "Цены не изменились"; else git commit -m "Цены на $(date -u +%F)" && git push; fi
+          if git diff --cached --quiet; then echo "Цены не изменились"; else git commit -m "Цены на $(date -u +%F)" && git pull --rebase && git push; fi
