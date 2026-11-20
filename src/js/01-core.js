@@ -66,8 +66,11 @@ const PREMIUM = {
   berries:{n:'Ягоды', re:/^berr/},
   redfish:{n:'Красная рыба', re:/salmon|trout|semga|forel|red_fish/},
   turkey:{n:'Индейка', re:/^turkey/},
-  icheese:{n:'Импортный сыр', re:/parmesan|mozzarella|feta|brie|cheddar|cheese_imp/}
+  icheese:{n:'Импортный сыр', re:/parmesan|mozzarella|feta|brie|cheddar|cheese_imp/},
+  peanut:{n:'Арахисовая паста', re:/^peanut/},
+  tuna:{n:'Тунец (консервы)', re:/^tuna/}
 };
+const premiumId = id => { for (const k in PREMIUM) if (PREMIUM[k].re.test(id)) return k; return null; };
 // Тепличные овощи, если в данных ещё нет season:'summer'.
 const SUMMER_FALLBACK = ['tomato','cucumber','pepper','zucchini','eggplant'];
 const WINTER_ALT = 'капуста, морковь, свёкла';
@@ -120,9 +123,17 @@ const plateG = (r, m) => Math.round(yieldOf(r)*m/10)*10;
 const isSoup = r => r.soup === true || (r.soup !== false && /суп|шорпо|борщ|кесме/i.test(r.n));
 const isRedMeat = id => id !== 'liver' && !!ING[id] && (ING[id].t||[]).some(t => t === 'beef' || t === 'mutton');
 const STARCH = new Set(['potato','rice','noodles','pasta','flour','kesme','lepeshka','lavash','bread']);
-// Тяжёлое для ужина (при диабете/давлении): флаги heavy/fatty, а для обеденных блюд ещё супы и «красное мясо + картошка/тесто/рис».
+const isMeatFish = id => { const t = ING[id] && ING[id].t || []; return t.includes('meat') || t.includes('fish'); };
+// «Мясо/рыба + картошка» (хек с картофелем, жаркоп, окорочка с картошкой): сытно, при диабете/давлении только в обед.
+function potatoProtein(r){
+  if ((r.ing.potato||0) < 100) return false;
+  let g = 0; for (const id in r.ing) if (isMeatFish(id)) g += r.ing[id];
+  return g >= 80;
+}
+// Тяжёлое для ужина (при диабете/давлении): флаги heavy/fatty, «мясо/рыба + картошка», а для обеденных блюд ещё супы и «красное мясо + картошка/тесто/рис».
 function heavyDinner(r){
   if (hasF(r,'heavy') || hasF(r,'fatty')) return true;
+  if (potatoProtein(r)) return true;
   if ((r.types||[]).includes('d')) return false;
   if (isSoup(r)) return true;
   let red = false, st = false;
@@ -148,6 +159,57 @@ function baseOf(r){
   return r._base = best ? normBase(best) : r.id;
 }
 const fruitIds = r => { if (r._fr) return r._fr; return r._fr = Object.keys(r.ing).filter(id => ING[id] && ING[id].cat === 'fruit' && id !== 'lemon'); };
+// Ключи разнообразия блюда: основа + крупа-гарнир (≥ 40 г) + мясо/рыба (≥ 50 г) + много картошки (keys — «раз в день»).
+// Недельный лимит (wkeys) — по основе и крупе-гарниру; курицу дополнительно ограничивает «не больше 4 дней».
+// «Печень с гречкой» и «гречка с курицей» делят ключ buckwheat — значит, не в один день и не чаще лимита в неделю.
+const GRAIN_KEYS = new Set(['buckwheat','rice','bulgur','pasta','noodles','millet','oats','semolina','dough','couscous','barley','corn_grits']);
+const GRAIN_ALIAS = {rice_long:'rice', rice_round:'rice', kesme:'noodles', flour:'dough', spaghetti:'pasta', vermicelli:'pasta'};
+function grainKey(id){ const i = ING[id]; if (!i || i.cat !== 'grain' || (i.t||[]).includes('legume') || id === 'starch') return null; return GRAIN_ALIAS[id] || id.split('_')[0]; }
+function meatKey(id){
+  const i = ING[id]; if (!i || /pelmeni|chuchvara/.test(id)) return null; const t = i.t || [];
+  if (/liver/.test(id)) return 'liver';
+  for (const k of ['chicken','turkey','mutton','beef','fish']) if (t.includes(k)) return k;
+  return t.includes('meat') ? id.split('_')[0] : null;
+}
+// Лимит в неделю (сколько раз готовим): крупы 2, курица и картошка 4, остальное 3.
+const keyLim = k => GRAIN_KEYS.has(k) ? 2 : 3;
+function vk(r){
+  if (r._vk) return r._vk;
+  const b = baseOf(r), set = new Set([b]), wk = new Set([b]); let chick = false;
+  for (const id in r.ing){
+    const g = r.ing[id], gk = grainKey(id), mk = meatKey(id);
+    if (gk && g >= (gk === 'dough' ? 60 : 40)){ set.add(gk); wk.add(gk); }
+    if (mk && g >= 50){ set.add(mk); if (mk === 'chicken') chick = true; }
+    if (id === 'potato' && g >= 150) set.add('potato');
+  }
+  return r._vk = {keys:[...set], set, wkeys:[...wk], wset:wk, chick};
+}
+// Солёное: флаг salty, а ещё любое блюдо с квашеной капустой, солёными/маринованными овощами, сельдью.
+const SALTY_RE = /sauerkraut|pickle|kvash|marin|olive|kimchi|herring|seledk|brynza/;
+function saltyR(r){
+  if (r._sl !== undefined) return r._sl;
+  return r._sl = hasF(r,'salty') || Object.keys(r.ing).some(id => SALTY_RE.test(id) || (ING[id] && /квашен|солён|солен|маринов|сельд/i.test(ING[id].n)));
+}
+// Белая мука: флаг whiteflour или заметное количество белого хлеба, лепёшки, лаваша, макарон, лапши, теста.
+const WHITE_IDS = new Set(['bread','lepeshka','lavash','pasta','noodles','kesme','flour','pelmeni','chuchvara','samsa','baton']);
+function whiteR(r){
+  if (r._wf !== undefined) return r._wf;
+  let g = 0; for (const id in r.ing) if (WHITE_IDS.has(id)) g += r.ing[id];
+  return r._wf = hasF(r,'whiteflour') || g >= 40;
+}
+const flagOn = (r, f) => f === 'whiteflour' ? whiteR(r) : f === 'salty' ? saltyR(r) : hasF(r, f);
+// Готовые замороженные пельмени/чучвара.
+const frozenR = r => Object.keys(r.ing).some(id => /pelmeni|chuchvara|vareniki|frozen_dumpl/.test(id));
+// Техника: из данных (r.needs), иначе по названию.
+function needsOf(r){
+  if (Array.isArray(r.needs)) return r.needs;
+  if (r._nd) return r._nd;
+  const n = r.n || '', out = [];
+  if (/хумус|суп-пюре|крем-суп|смузи|блендер/i.test(n)) out.push('blender');
+  if (/духовк|запеч|запекан|противн|самса|в фольге/i.test(n)) out.push('oven');
+  return r._nd = out;
+}
+const equipOf = () => Object.assign({blender:true, oven:true}, state && state.equip && typeof state.equip === 'object' ? state.equip : {});
 const kaymakStyle = r => !!(r.ing.kaymak || (r.ing.lepeshka && (r.types||[]).includes('b') && hasF(r,'fatty')));
 // Шаги рецепта: [[160|мл]] — количество на 1 порцию, показываем × число порций.
 const NOSCALE = /мин|час|°|см|сек|раз/;
@@ -189,10 +251,28 @@ const storeName = k => SD ? (SD.info[k] ? SD.info[k].n || k : k) : (STORES[k] ||
 
 /* ===================== Состояние ===================== */
 const LS = 'korzina-nedeli-v1';
-function newPerson(kind, extra){ return Object.assign(kind === 'child' ? {id:uid(),kind:'child',name:'',sex:'m',age:8,height:'',weight:'',cact:'mid',dislikes:[]} :{id:uid(),kind:'adult',name:'',sex:'f',age:30,height:165,weight:65,act:1.375,goal:'keep',target:'',dislikes:[]}, extra||{}); }
+// Цель по умолчанию — по ИМТ: < 18,5 набрать массу, 18,5–25 держать вес, > 25 похудеть.
+// goalAuto — цель, которую поставили мы; пока пользователь её не поменял, она следует за ростом и весом.
+const bmiOf = p => { const w = +p.weight, h = +p.height/100; return w > 0 && h > .5 ? w/(h*h) : 0; };
+function bmiGoal(p){ const b = bmiOf(p); return !b ? 'keep' : b < 18.5 ? 'gain' : b > 25 ? 'lose' : 'keep'; }
+function syncGoal(p){
+  if (!p || !p.goalAuto || !isAdult(p)) return;
+  if (p.goal !== p.goalAuto){ delete p.goalAuto; return; }
+  // Основной человек: после шага «Цель» в онбординге выбор считается сделанным.
+  if (typeof state !== 'undefined' && state && state.people && state.people[0] === p && (state.goalSeen || state.onboarded)){ delete p.goalAuto; return; }
+  const g = bmiGoal(p); if (g === p.goal) return;
+  p.goal = g; p.goalAuto = g;
+  if (state && state.people && state.people[0] === p && !state.macroTouched && GOALS[g]) state.macro = GOALS[g].macro;
+}
+function newPerson(kind, extra){
+  if (kind === 'child') return Object.assign({id:uid(),kind:'child',name:'',sex:'m',age:8,height:'',weight:'',cact:'mid',dislikes:[]}, extra||{});
+  const p = Object.assign({id:uid(),kind:'adult',name:'',sex:'f',age:30,height:165,weight:65,act:1.375,goal:'keep',target:'',dislikes:[]}, extra||{});
+  if (!extra || !('goal' in extra)){ p.goal = bmiGoal(p); p.goalAuto = p.goal; }
+  return p;
+}
 function defaults(){
   return {v:2,onboarded:false,step:0,goalSeen:false,tab:'menu',day:0,start:todayIso(),
-    people:[newPerson('adult',{weight:70,goal:'lose'})],
+    people:[newPerson('adult',{weight:70})],
     family:false,macro:'balanced',mp:35,mf:30,macroTouched:false,
     cuisines:['kg','home','eu','asia','zoh'],diet:'all',meals:4,quick:'off',learner:false,cook2:false,autoProt:null,
     health:{diab:false,bp:false},dislikes:[],allergies:[],customEx:'',
@@ -259,7 +339,7 @@ function childKcal(p){
 }
 function bmrAct(p){ const w=+p.weight||70, h=+p.height||170, a=+p.age||30; return (10*w + 6.25*h - 5*a + (p.sex === 'm' ? 5 : -161)) * (+p.act||1.375); }
 function maintKcal(p){ if (!isAdult(p)) return childKcal(p); return Math.round(Math.max(p.sex==='m'?1500:1200, bmrAct(p))/10)*10; }
-function personKcal(p){ if (!isAdult(p)) return childKcal(p); return Math.round(Math.max(p.sex==='m'?1500:1200, bmrAct(p)*(GOALS[p.goal]||GOALS.keep).k)/10)*10; }
+function personKcal(p){ if (!isAdult(p)) return childKcal(p); if (p.goalAuto) syncGoal(p); return Math.round(Math.max(p.sex==='m'?1500:1200, bmrAct(p)*(GOALS[p.goal]||GOALS.keep).k)/10)*10; }
 const fatPct = () => state.macro === 'custom' ? clamp(+state.mf||30, 15, 45) : (MACROS[state.macro]||MACROS.balanced).f;
 const protPerKg = p => (GOALS[p.goal]||GOALS.keep).pk;
 function targets(p){
@@ -278,7 +358,7 @@ function portion(r, slot, kcal, meals = planMeals(), child = false){
   if (isSoup(r)){ const [a, b] = soupRange(r, child); return Math.round(clamp(m, a, b)*100)/100 || .05; }
   return Math.round(clamp(m, .5, 2.2)*20)/20;
 }
-const autoProtOn = () => state.autoProt == null ? ['lose','gain'].includes(state.people[0].goal) : !!state.autoProt;
+const autoProtOn = () => (syncGoal(state.people[0]), state.autoProt == null) ? ['lose','gain'].includes(state.people[0].goal) : !!state.autoProt;
 function personLabel(i){
   const p = state.people[i]; if (!p) return '';
   if (p.name) return p.name;
@@ -302,19 +382,21 @@ function offer(store, id){
   const own = state.prices[id], adj = SD ? 0 : (+state.adj||0);
   return {size: i.sale, price: own != null ? own : i.price*(1 + adj/100), item:null, avg: !!SD, key:id, custom: own != null, store};
 }
+// Цена для планировщика — та же, что в корзине (охлаждённая курица и т. п., если корзина это умеет).
+const offerOf = (store, id) => typeof cartOffer === 'function' ? cartOffer(store, id) : offer(store, id);
 let pc = {sd:undefined};
 function pctx(){
   const s2 = state.stores2;
-  if (pc.sd !== SD || pc.prices !== state.prices || pc.pv !== pricesVer || pc.store !== state.store || pc.split !== state.split || pc.adj !== state.adj || pc.s2a !== s2[0] || pc.s2b !== s2[1])
-    pc = {sd:SD, prices:state.prices, pv:pricesVer, store:state.store, split:state.split, adj:state.adj, s2a:s2[0], s2b:s2[1], stores:activeStores(), gp:{}, ps:{}, sc:{}};
+  if (pc.sd !== SD || pc.prices !== state.prices || pc.pv !== pricesVer || pc.store !== state.store || pc.split !== state.split || pc.adj !== state.adj || pc.s2a !== s2[0] || pc.s2b !== s2[1] || pc.ch !== (state.chilled ?? false))
+    pc = {sd:SD, prices:state.prices, pv:pricesVer, store:state.store, split:state.split, adj:state.adj, s2a:s2[0], s2b:s2[1], ch:(state.chilled ?? false), stores:activeStores(), gp:{}, ps:{}, sc:{}};
   return pc;
 }
 function gramPrice(id){
   const c = pctx(); const v = c.gp[id]; if (v !== undefined) return v;
-  let best = Infinity; for (const st of c.stores){ const o = offer(st, id); const g = o.price / (o.size === 'w' ? 1000 : o.size); if (g < best) best = g; }
+  let best = Infinity; for (const st of c.stores){ const o = offerOf(st, id); const g = o.price / (o.size === 'w' ? 1000 : o.size); if (g < best) best = g; }
   return c.gp[id] = best;
 }
-function packSize(id){ const c = pctx(); const v = c.ps[id]; if (v !== undefined) return v; const o = offer(c.stores[0], id); return c.ps[id] = o.size === 'w' ? 0 : o.size; }
+function packSize(id){ const c = pctx(); const v = c.ps[id]; if (v !== undefined) return v; const o = offerOf(c.stores[0], id); return c.ps[id] = o.size === 'w' ? 0 : o.size; }
 function servingCost(r){ const c = pctx(); if (r.id in c.sc) return c.sc[r.id]; let s = 0; for (const id in r.ing) if (ING[id]) s += r.ing[id]*gramPrice(id); return c.sc[r.id] = s; }
 function buyIn(store, id, need){
   const o = offer(store, id), i = ING[id];

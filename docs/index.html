@@ -1159,8 +1159,11 @@ const PREMIUM = {
   berries:{n:'Ягоды', re:/^berr/},
   redfish:{n:'Красная рыба', re:/salmon|trout|semga|forel|red_fish/},
   turkey:{n:'Индейка', re:/^turkey/},
-  icheese:{n:'Импортный сыр', re:/parmesan|mozzarella|feta|brie|cheddar|cheese_imp/}
+  icheese:{n:'Импортный сыр', re:/parmesan|mozzarella|feta|brie|cheddar|cheese_imp/},
+  peanut:{n:'Арахисовая паста', re:/^peanut/},
+  tuna:{n:'Тунец (консервы)', re:/^tuna/}
 };
+const premiumId = id => { for (const k in PREMIUM) if (PREMIUM[k].re.test(id)) return k; return null; };
 // Тепличные овощи, если в данных ещё нет season:'summer'.
 const SUMMER_FALLBACK = ['tomato','cucumber','pepper','zucchini','eggplant'];
 const WINTER_ALT = 'капуста, морковь, свёкла';
@@ -1213,9 +1216,17 @@ const plateG = (r, m) => Math.round(yieldOf(r)*m/10)*10;
 const isSoup = r => r.soup === true || (r.soup !== false && /суп|шорпо|борщ|кесме/i.test(r.n));
 const isRedMeat = id => id !== 'liver' && !!ING[id] && (ING[id].t||[]).some(t => t === 'beef' || t === 'mutton');
 const STARCH = new Set(['potato','rice','noodles','pasta','flour','kesme','lepeshka','lavash','bread']);
-// Тяжёлое для ужина (при диабете/давлении): флаги heavy/fatty, а для обеденных блюд ещё супы и «красное мясо + картошка/тесто/рис».
+const isMeatFish = id => { const t = ING[id] && ING[id].t || []; return t.includes('meat') || t.includes('fish'); };
+// «Мясо/рыба + картошка» (хек с картофелем, жаркоп, окорочка с картошкой): сытно, при диабете/давлении только в обед.
+function potatoProtein(r){
+  if ((r.ing.potato||0) < 100) return false;
+  let g = 0; for (const id in r.ing) if (isMeatFish(id)) g += r.ing[id];
+  return g >= 80;
+}
+// Тяжёлое для ужина (при диабете/давлении): флаги heavy/fatty, «мясо/рыба + картошка», а для обеденных блюд ещё супы и «красное мясо + картошка/тесто/рис».
 function heavyDinner(r){
   if (hasF(r,'heavy') || hasF(r,'fatty')) return true;
+  if (potatoProtein(r)) return true;
   if ((r.types||[]).includes('d')) return false;
   if (isSoup(r)) return true;
   let red = false, st = false;
@@ -1241,6 +1252,57 @@ function baseOf(r){
   return r._base = best ? normBase(best) : r.id;
 }
 const fruitIds = r => { if (r._fr) return r._fr; return r._fr = Object.keys(r.ing).filter(id => ING[id] && ING[id].cat === 'fruit' && id !== 'lemon'); };
+// Ключи разнообразия блюда: основа + крупа-гарнир (≥ 40 г) + мясо/рыба (≥ 50 г) + много картошки (keys — «раз в день»).
+// Недельный лимит (wkeys) — по основе и крупе-гарниру; курицу дополнительно ограничивает «не больше 4 дней».
+// «Печень с гречкой» и «гречка с курицей» делят ключ buckwheat — значит, не в один день и не чаще лимита в неделю.
+const GRAIN_KEYS = new Set(['buckwheat','rice','bulgur','pasta','noodles','millet','oats','semolina','dough','couscous','barley','corn_grits']);
+const GRAIN_ALIAS = {rice_long:'rice', rice_round:'rice', kesme:'noodles', flour:'dough', spaghetti:'pasta', vermicelli:'pasta'};
+function grainKey(id){ const i = ING[id]; if (!i || i.cat !== 'grain' || (i.t||[]).includes('legume') || id === 'starch') return null; return GRAIN_ALIAS[id] || id.split('_')[0]; }
+function meatKey(id){
+  const i = ING[id]; if (!i || /pelmeni|chuchvara/.test(id)) return null; const t = i.t || [];
+  if (/liver/.test(id)) return 'liver';
+  for (const k of ['chicken','turkey','mutton','beef','fish']) if (t.includes(k)) return k;
+  return t.includes('meat') ? id.split('_')[0] : null;
+}
+// Лимит в неделю (сколько раз готовим): крупы 2, курица и картошка 4, остальное 3.
+const keyLim = k => GRAIN_KEYS.has(k) ? 2 : 3;
+function vk(r){
+  if (r._vk) return r._vk;
+  const b = baseOf(r), set = new Set([b]), wk = new Set([b]); let chick = false;
+  for (const id in r.ing){
+    const g = r.ing[id], gk = grainKey(id), mk = meatKey(id);
+    if (gk && g >= (gk === 'dough' ? 60 : 40)){ set.add(gk); wk.add(gk); }
+    if (mk && g >= 50){ set.add(mk); if (mk === 'chicken') chick = true; }
+    if (id === 'potato' && g >= 150) set.add('potato');
+  }
+  return r._vk = {keys:[...set], set, wkeys:[...wk], wset:wk, chick};
+}
+// Солёное: флаг salty, а ещё любое блюдо с квашеной капустой, солёными/маринованными овощами, сельдью.
+const SALTY_RE = /sauerkraut|pickle|kvash|marin|olive|kimchi|herring|seledk|brynza/;
+function saltyR(r){
+  if (r._sl !== undefined) return r._sl;
+  return r._sl = hasF(r,'salty') || Object.keys(r.ing).some(id => SALTY_RE.test(id) || (ING[id] && /квашен|солён|солен|маринов|сельд/i.test(ING[id].n)));
+}
+// Белая мука: флаг whiteflour или заметное количество белого хлеба, лепёшки, лаваша, макарон, лапши, теста.
+const WHITE_IDS = new Set(['bread','lepeshka','lavash','pasta','noodles','kesme','flour','pelmeni','chuchvara','samsa','baton']);
+function whiteR(r){
+  if (r._wf !== undefined) return r._wf;
+  let g = 0; for (const id in r.ing) if (WHITE_IDS.has(id)) g += r.ing[id];
+  return r._wf = hasF(r,'whiteflour') || g >= 40;
+}
+const flagOn = (r, f) => f === 'whiteflour' ? whiteR(r) : f === 'salty' ? saltyR(r) : hasF(r, f);
+// Готовые замороженные пельмени/чучвара.
+const frozenR = r => Object.keys(r.ing).some(id => /pelmeni|chuchvara|vareniki|frozen_dumpl/.test(id));
+// Техника: из данных (r.needs), иначе по названию.
+function needsOf(r){
+  if (Array.isArray(r.needs)) return r.needs;
+  if (r._nd) return r._nd;
+  const n = r.n || '', out = [];
+  if (/хумус|суп-пюре|крем-суп|смузи|блендер/i.test(n)) out.push('blender');
+  if (/духовк|запеч|запекан|противн|самса|в фольге/i.test(n)) out.push('oven');
+  return r._nd = out;
+}
+const equipOf = () => Object.assign({blender:true, oven:true}, state && state.equip && typeof state.equip === 'object' ? state.equip : {});
 const kaymakStyle = r => !!(r.ing.kaymak || (r.ing.lepeshka && (r.types||[]).includes('b') && hasF(r,'fatty')));
 // Шаги рецепта: [[160|мл]] — количество на 1 порцию, показываем × число порций.
 const NOSCALE = /мин|час|°|см|сек|раз/;
@@ -1282,10 +1344,28 @@ const storeName = k => SD ? (SD.info[k] ? SD.info[k].n || k : k) : (STORES[k] ||
 
 /* ===================== Состояние ===================== */
 const LS = 'korzina-nedeli-v1';
-function newPerson(kind, extra){ return Object.assign(kind === 'child' ? {id:uid(),kind:'child',name:'',sex:'m',age:8,height:'',weight:'',cact:'mid',dislikes:[]} :{id:uid(),kind:'adult',name:'',sex:'f',age:30,height:165,weight:65,act:1.375,goal:'keep',target:'',dislikes:[]}, extra||{}); }
+// Цель по умолчанию — по ИМТ: < 18,5 набрать массу, 18,5–25 держать вес, > 25 похудеть.
+// goalAuto — цель, которую поставили мы; пока пользователь её не поменял, она следует за ростом и весом.
+const bmiOf = p => { const w = +p.weight, h = +p.height/100; return w > 0 && h > .5 ? w/(h*h) : 0; };
+function bmiGoal(p){ const b = bmiOf(p); return !b ? 'keep' : b < 18.5 ? 'gain' : b > 25 ? 'lose' : 'keep'; }
+function syncGoal(p){
+  if (!p || !p.goalAuto || !isAdult(p)) return;
+  if (p.goal !== p.goalAuto){ delete p.goalAuto; return; }
+  // Основной человек: после шага «Цель» в онбординге выбор считается сделанным.
+  if (typeof state !== 'undefined' && state && state.people && state.people[0] === p && (state.goalSeen || state.onboarded)){ delete p.goalAuto; return; }
+  const g = bmiGoal(p); if (g === p.goal) return;
+  p.goal = g; p.goalAuto = g;
+  if (state && state.people && state.people[0] === p && !state.macroTouched && GOALS[g]) state.macro = GOALS[g].macro;
+}
+function newPerson(kind, extra){
+  if (kind === 'child') return Object.assign({id:uid(),kind:'child',name:'',sex:'m',age:8,height:'',weight:'',cact:'mid',dislikes:[]}, extra||{});
+  const p = Object.assign({id:uid(),kind:'adult',name:'',sex:'f',age:30,height:165,weight:65,act:1.375,goal:'keep',target:'',dislikes:[]}, extra||{});
+  if (!extra || !('goal' in extra)){ p.goal = bmiGoal(p); p.goalAuto = p.goal; }
+  return p;
+}
 function defaults(){
   return {v:2,onboarded:false,step:0,goalSeen:false,tab:'menu',day:0,start:todayIso(),
-    people:[newPerson('adult',{weight:70,goal:'lose'})],
+    people:[newPerson('adult',{weight:70})],
     family:false,macro:'balanced',mp:35,mf:30,macroTouched:false,
     cuisines:['kg','home','eu','asia','zoh'],diet:'all',meals:4,quick:'off',learner:false,cook2:false,autoProt:null,
     health:{diab:false,bp:false},dislikes:[],allergies:[],customEx:'',
@@ -1352,7 +1432,7 @@ function childKcal(p){
 }
 function bmrAct(p){ const w=+p.weight||70, h=+p.height||170, a=+p.age||30; return (10*w + 6.25*h - 5*a + (p.sex === 'm' ? 5 : -161)) * (+p.act||1.375); }
 function maintKcal(p){ if (!isAdult(p)) return childKcal(p); return Math.round(Math.max(p.sex==='m'?1500:1200, bmrAct(p))/10)*10; }
-function personKcal(p){ if (!isAdult(p)) return childKcal(p); return Math.round(Math.max(p.sex==='m'?1500:1200, bmrAct(p)*(GOALS[p.goal]||GOALS.keep).k)/10)*10; }
+function personKcal(p){ if (!isAdult(p)) return childKcal(p); if (p.goalAuto) syncGoal(p); return Math.round(Math.max(p.sex==='m'?1500:1200, bmrAct(p)*(GOALS[p.goal]||GOALS.keep).k)/10)*10; }
 const fatPct = () => state.macro === 'custom' ? clamp(+state.mf||30, 15, 45) : (MACROS[state.macro]||MACROS.balanced).f;
 const protPerKg = p => (GOALS[p.goal]||GOALS.keep).pk;
 function targets(p){
@@ -1371,7 +1451,7 @@ function portion(r, slot, kcal, meals = planMeals(), child = false){
   if (isSoup(r)){ const [a, b] = soupRange(r, child); return Math.round(clamp(m, a, b)*100)/100 || .05; }
   return Math.round(clamp(m, .5, 2.2)*20)/20;
 }
-const autoProtOn = () => state.autoProt == null ? ['lose','gain'].includes(state.people[0].goal) : !!state.autoProt;
+const autoProtOn = () => (syncGoal(state.people[0]), state.autoProt == null) ? ['lose','gain'].includes(state.people[0].goal) : !!state.autoProt;
 function personLabel(i){
   const p = state.people[i]; if (!p) return '';
   if (p.name) return p.name;
@@ -1395,19 +1475,21 @@ function offer(store, id){
   const own = state.prices[id], adj = SD ? 0 : (+state.adj||0);
   return {size: i.sale, price: own != null ? own : i.price*(1 + adj/100), item:null, avg: !!SD, key:id, custom: own != null, store};
 }
+// Цена для планировщика — та же, что в корзине (охлаждённая курица и т. п., если корзина это умеет).
+const offerOf = (store, id) => typeof cartOffer === 'function' ? cartOffer(store, id) : offer(store, id);
 let pc = {sd:undefined};
 function pctx(){
   const s2 = state.stores2;
-  if (pc.sd !== SD || pc.prices !== state.prices || pc.pv !== pricesVer || pc.store !== state.store || pc.split !== state.split || pc.adj !== state.adj || pc.s2a !== s2[0] || pc.s2b !== s2[1])
-    pc = {sd:SD, prices:state.prices, pv:pricesVer, store:state.store, split:state.split, adj:state.adj, s2a:s2[0], s2b:s2[1], stores:activeStores(), gp:{}, ps:{}, sc:{}};
+  if (pc.sd !== SD || pc.prices !== state.prices || pc.pv !== pricesVer || pc.store !== state.store || pc.split !== state.split || pc.adj !== state.adj || pc.s2a !== s2[0] || pc.s2b !== s2[1] || pc.ch !== (state.chilled ?? false))
+    pc = {sd:SD, prices:state.prices, pv:pricesVer, store:state.store, split:state.split, adj:state.adj, s2a:s2[0], s2b:s2[1], ch:(state.chilled ?? false), stores:activeStores(), gp:{}, ps:{}, sc:{}};
   return pc;
 }
 function gramPrice(id){
   const c = pctx(); const v = c.gp[id]; if (v !== undefined) return v;
-  let best = Infinity; for (const st of c.stores){ const o = offer(st, id); const g = o.price / (o.size === 'w' ? 1000 : o.size); if (g < best) best = g; }
+  let best = Infinity; for (const st of c.stores){ const o = offerOf(st, id); const g = o.price / (o.size === 'w' ? 1000 : o.size); if (g < best) best = g; }
   return c.gp[id] = best;
 }
-function packSize(id){ const c = pctx(); const v = c.ps[id]; if (v !== undefined) return v; const o = offer(c.stores[0], id); return c.ps[id] = o.size === 'w' ? 0 : o.size; }
+function packSize(id){ const c = pctx(); const v = c.ps[id]; if (v !== undefined) return v; const o = offerOf(c.stores[0], id); return c.ps[id] = o.size === 'w' ? 0 : o.size; }
 function servingCost(r){ const c = pctx(); if (r.id in c.sc) return c.sc[r.id]; let s = 0; for (const id in r.ing) if (ING[id]) s += r.ing[id]*gramPrice(id); return c.sc[r.id] = s; }
 function buyIn(store, id, need){
   const o = offer(store, id), i = ING[id];
@@ -1422,32 +1504,42 @@ const capVal = () => parseFloat(state.cap) || 0;
 const typeFit = (r, s) => { const t = r.types; return s==='b' ? t.includes('b') : s==='s' ? t.includes('s') : s==='l' ? t.includes('m') : (t.includes('m')||t.includes('d')); };
 function customWords(){ return String(state.customEx||'').toLowerCase().split(/[,;\n]+/).map(s=>s.trim()).filter(s=>s.length>=3).map(s=>s.slice(0, Math.max(3, s.length-2))); }
 let fcache = {key:'', F:null};
-function resetCaches(){ fcache = {key:'', F:null}; pc = {sd:undefined}; estCache.key = ''; wkCache.start = null; balCache = new Map(); tipCache.key = ''; summerIds.v = null; }
+function resetCaches(){ fcache = {key:'', F:null}; pc = {sd:undefined}; estCache.key = ''; wkCache.start = null; balCache = new Map(); tipCache.key = ''; summerIds.v = null; altCache.clear(); altRecent.length = 0; altWork = null; }
 function filterCtx(){
-  const key = JSON.stringify([state.allergies,state.diet,state.dislikes,state.customEx,state.health,state.quick,state.learner,state.start,state.cuisines]);
+  const eq = equipOf();
+  const key = JSON.stringify([state.allergies,state.diet,state.dislikes,state.customEx,state.health,state.quick,state.learner,state.start,state.cuisines,eq]);
   if (fcache.key === key && fcache.F) return fcache.F;
   const tags = new Set(); state.allergies.forEach(a => (ALLERGY_TAGS[a]||[a]).forEach(t => tags.add(t)));
   const ex = new Set(); state.dislikes.forEach(k => (DISLIKES[k] ? DISLIKES[k].ids : []).forEach(id => ex.add(id)));
-  const F = {key, tags, ex, words:customWords(), diab:!!state.health.diab, bp:!!state.health.bp, pools:{}, alt:{}, base:{}, bread:{}};
+  const F = {key, tags, ex, words:customWords(), diab:!!state.health.diab, bp:!!state.health.bp, equip:eq, pools:{}, alt:{}, base:{}, bread:{}};
   F.anyHealth = F.diab || F.bp;
   fcache = {key, F}; return F;
 }
-function ingOK(id, F){
+// inDish — продукт внутри блюда. Без него — отдельный продукт к столу (хлеб к супу, добавка для белка):
+// при диабете только ржаной хлеб, в «Экономе» без дорогих продуктов.
+const WHITE_BREAD = new Set(['bread','lepeshka','lavash','baton']);
+function ingOK(id, F, inDish){
   const i = ING[id]; if (!i) return false; const t = i.t || [];
   if (t.some(x => F.tags.has(x))) return false;
   if (state.diet === 'veg' && (t.includes('meat') || t.includes('fish'))) return false;
   if (state.diet === 'pesc' && t.includes('meat')) return false;
   if (F.ex.has(id)) return false;
   const nm = i.n.toLowerCase(); if (F.words.some(w => nm.includes(w))) return false;
+  if (!inDish){
+    if (F.diab && WHITE_BREAD.has(id)) return false;
+    if (F.bp && SALTY_RE.test(id)) return false;
+    if (state.mode === 'eco'){ const k = premiumId(id); if (k && !(state.ecoKeep||[]).includes(k)) return false; }
+  }
   return true;
 }
 function baseOK(r, F){
   if (r.id in F.base) return F.base[r.id];
   let ok = true;
-  for (const id in r.ing) if (!ingOK(id, F)){ ok = false; break; }
+  for (const id in r.ing) if (!ingOK(id, F, true)){ ok = false; break; }
   if (ok){ const rn = r.n.toLowerCase(); if (F.words.some(w => rn.includes(w))) ok = false; }
-  if (ok && F.diab && (hasF(r,'sweet') || honeyCentred(r))) ok = false;
-  if (ok && F.bp && hasF(r,'salty')) ok = false;
+  if (ok && F.diab && (hasF(r,'sweet') || honeyCentred(r) || (r.ing.banana||0) >= 60)) ok = false;
+  if (ok && F.bp && saltyR(r)) ok = false;
+  if (ok && needsOf(r).some(n => F.equip[n] === false)) ok = false;
   return F.base[r.id] = ok;
 }
 let wkCache = {start:null, arr:[]};
@@ -1455,12 +1547,13 @@ function isWk(d){ if (wkCache.start !== state.start){ const s = parseIso(state.s
 const quickOn = wk => state.quick === 'always' || (state.quick === 'weekdays' && !wk);
 function slotOK(r, s, wk, F){
   if (!typeFit(r,s) || !baseOK(r,F)) return false;
+  if (s === 's' && r.time > QUICK_LIM.s) return false; // перекус — не дольше 15 минут всегда
   if (quickOn(wk) && r.time > QUICK_LIM[s]) return false;
   if (state.learner && !wk && diffOf(r) === 'hard') return false;
   if (F.anyHealth && s === 'd' && heavyDinner(r)) return false;
   return true;
 }
-// Только «безопасные» правила: аллергии, диета, нелюбимое, здоровье. Применяются сразу.
+// Только «безопасные» правила: аллергии, диета, нелюбимое, здоровье, техника. Применяются сразу.
 const safeOK = (r, s, F) => baseOK(r, F) && !(F.anyHealth && s === 'd' && heavyDinner(r));
 function poolFor(s, wk, F = filterCtx()){ const k = s + (wk ? 1 : 0); return F.pools[k] || (F.pools[k] = RECIPES.filter(r => slotOK(r, s, wk, F))); }
 const pool = s => poolFor(s, false);
@@ -1469,76 +1562,190 @@ function personEx(p){ const ex = new Set(); (p.dislikes||[]).forEach(k => (DISLI
 const blocks = (ex, r) => { for (const id in r.ing) if (ex.has(id)) return true; return false; };
 const cpk = r => servingCost(r) / r.kcal;
 function medianCpk(list){ const a = list.map(cpk).sort((x,y)=>x-y); return a.length ? a[a.length>>1] : 1; }
-function altFor(r, s, d, i, F){
-  const p = state.people[i]; if (!p || !(p.dislikes||[]).length) return null;
-  const ex = personEx(p); if (!blocks(ex, r)) return null;
+
+/* ===================== Отдельные блюда для одного человека ===================== */
+// Замена для того, кто не ест основное блюдо, подбирается по ЕГО меню на неделю: те же правила разнообразия
+// (не повторять его обед/вчерашний ужин, лимиты основы и т. д.). Его ужин может стать его обедом на завтра (остатки).
+// План ищем среди: явно переданного, собираемого сейчас (altWork), state.plan и последних собранных.
+let altWork = null; const altRecent = [], altCache = new Map();
+const planSig = (plan, lo) => plan.map((day, d) => SLOT_ORDER.map(s => (day && day[s]) || '').join(',') + (lo && lo[d] ? '*' : '') + (skipSlot(d, 's') ? '!' : '')).join('|');
+const altSim = (c, r) => Math.abs(Math.log(c.kcal/r.kcal)) + Math.abs(c.P/c.kcal - r.P/r.kcal)*12 + (c.cu === r.cu ? 0 : .3);
+function altSimple(r, s, d, ex, F){
   const wk = isWk(d), key = r.id + '|' + s + '|' + (wk?1:0) + '|' + [...ex].join(',');
   if (key in F.alt) return F.alt[key];
   let best = null, bs = Infinity; const base = cpk(r) || 1;
   for (const c of poolFor(s, wk, F)){
     if (c.id === r.id || blocks(ex, c)) continue;
-    const sc = Math.abs(Math.log(c.kcal/r.kcal)) + Math.abs(c.P/c.kcal - r.P/r.kcal)*12 + (c.cu === r.cu ? 0 : .3) + .3*cpk(c)/base;
+    const sc = altSim(c, r) + .3*cpk(c)/base + (c.prep ? .5 : 0);
     if (sc < bs){ bs = sc; best = c; }
   }
   return F.alt[key] = best;
+}
+function altWeek(plan, lo, i, ex, F, G0){
+  const key = planSig(plan, lo) + '#' + i + '#' + [...ex].join(',') + '#' + F.key + '#' + state.mode + '#' + state.cook2 + '#' + todayIso();
+  const hit = altCache.get(key); if (hit) return hit;
+  if (altCache.size > 300) altCache.clear();
+  const G = G0 || genSetup(state.mode), pp = plan.map(day => Object.assign({}, day)), plo = plan.map(() => false), out = {};
+  for (let d = 0; d < 7; d++){ const day = plan[d]; if (!day) continue;
+    for (const s of SLOT_ORDER){
+      const r = RM[day[s]]; if (!r || skipSlot(d, s)) continue;
+      if (s === 'l' && lo[d]){
+        if (!blocks(ex, r)){ plo[d] = true; continue; }
+        const pd = d > 0 ? RM[pp[d-1].d] : null;
+        if (pd && pd.id !== plan[d-1].d && state.cook2 && keepsOf(pd) >= 2 && dayOK(pp[d], 'l', pd)){ pp[d].l = pd.id; plo[d] = true; out[d+':l'] = pd; continue; }
+      }
+      if (!blocks(ex, r)) continue;
+      const c = ctxFor(pp, plo, d, s, G, planSum(pp, plo, G, true)); c.light = true;
+      // Его ужин станет его обедом завтра, если основной обед завтра — остатки, которые он тоже не ест.
+      if (s === 'd' && d < 6 && lo[d+1] && state.cook2 && plan[d+1].l === r.id) c.loNext = true;
+      const base = cpk(r) || 1; let best = null, bk = Infinity;
+      for (const x of poolFor(s, isWk(d), F)){
+        if (x.id === r.id || blocks(ex, x) || !dayOK(pp[d], s, x)) continue;
+        const k = vMask(x, c, G)*100 + altSim(x, r) + .3*cpk(x)/base + (x.prep ? 2 : 0) + (premBad(x, G) ? 3 : 0) + (G.noFrozen && frozenR(x) ? 3 : 0) + summerPen(x, G)*.5;
+        if (k < bk){ bk = k; best = x; }
+      }
+      if (best){ pp[d][s] = best.id; out[d+':'+s] = best; }
+    }
+  }
+  altCache.set(key, out); return out;
+}
+function altFor(r, s, d, i, F, plan, lo){
+  const p = state.people[i]; if (!p || !(p.dislikes||[]).length) return null;
+  const ex = personEx(p); if (!blocks(ex, r)) return null;
+  let P = plan ? {plan, lo:lo || []} : null;
+  if (!P){ const list = [altWork, state.plan ? {plan:state.plan, lo:state.lo} : null].concat(altRecent);
+    for (const x of list) if (x && x.plan && x.plan[d] && x.plan[d][s] === r.id){ P = x; break; } }
+  if (P){ const w = altWeek(P.plan, P.lo || [], i, ex, F, P.G); const a = w[d+':'+s]; if (a) return a; }
+  return altSimple(r, s, d, ex, F);
 }
 
 /* ===================== Подбор меню ===================== */
 const skipSlot = (d, s) => s === 's' && !!(state.noSnack && state.noSnack[d]);
 function premOf(r){ if (r._pm) return r._pm; const ids = Object.keys(r.ing), out = []; for (const k in PREMIUM) if (ids.some(id => PREMIUM[k].re.test(id))) out.push(k); return r._pm = out; }
 const premBad = (r, G) => !!G.eco && premOf(r).some(k => !G.keepP.has(k));
-function summerPen(r, G){ if (!G.winter) return 0; let g = 0; for (const id in r.ing) if (G.summer.has(id)) g += r.ing[id]; return g ? .25 + Math.min(1, g/200)*.75 : 0; }
+const summerG = r => { if (r._sg !== undefined) return r._sg; const S = summerIds(); let g = 0; for (const id in r.ing) if (S.has(id)) g += r.ing[id]; return r._sg = g; };
+function summerPen(r, G){ if (!G.winter) return 0; const g = summerG(r); return g ? .5 + Math.min(1.5, g/100) : 0; }
+// Тепличные овощи зимой (октябрь–май): не больше ~800 г на взрослого и 500 г на ребёнка в неделю.
+const SUMMER_LIM = {adult:800, child:500};
+// Правила разнообразия и здоровья — биты маски. Чем старше бит, тем важнее правило; ослабляем с младших.
+// Кандидаты сравниваются по маске (лексикографически), потом по оценке — так нарушается только то, без чего нельзя.
+const B_NEAR = 1,     // то же блюдо в соседние дни; фрукт чаще 3 раз
+  B_SUMMER = 2,       // зимой тепличных овощей больше лимита
+  B_CHICK = 4,        // курица больше 4 дней в неделю
+  B_WEEK = 8,         // основа/крупа/мясо чаще лимита в неделю (крупы 2, курица и картошка 4, остальное 3)
+  B_CARB = 16,        // диабет: углеводов в обеде/ужине больше ~50 г
+  B_SLOT = 32,        // то же блюдо в том же приёме пищи в другой день
+  B_DISH = 64,        // одно блюдо чаще 2 раз в неделю (остатки — та же готовка)
+  B_DAY = 128,        // одна основа дважды в день (включая обед из остатков)
+  B_HEALTH = 256;     // лимиты здоровья: белая мука, жирное, каймак; диабет: углеводы завтрака/перекуса
+const RELAX_ORDER = ['соседние дни и фрукты','тепличные овощи зимой','курица ≤ 4 дней','недельные лимиты основы','углеводы обеда/ужина при диабете','одно блюдо в том же приёме','блюдо ≤ 2 раз','основа раз в день','лимиты здоровья'];
+const maskText = m => RELAX_ORDER.filter((t, i) => m & (1 << i)).join(', ');
 function genSetup(mode){
   const F = filterCtx(), pt = targets(state.people[0]), slots = slotList(), ml = slots.length, E = eaters();
-  const G = {F, mode, pt, k0:pt.k, rp:pt.p*4/pt.k, rf:pt.f*9/pt.k, rc:pt.c*4/pt.k, ml, slots, E:E.map(personKcal), C:E.map(p => !isAdult(p)), med:{}, maxUse:{}, w:(MODES[mode]||MODES.opt).w, hh:{}, sc:{},
-    lim:{}, kayLim:F.anyHealth ? 1 : 99, baseMax:3, fruitMax:3, winter:isWinter(), summer:summerIds(), eco:mode === 'eco', keepP:new Set(state.ecoKeep||[]),
-    bread0:breadFor(0, F, 'home'), fatMax:F.anyHealth ? pt.f*1.1 : Infinity, protOn:autoProtOn()};
-  if (F.diab) G.lim.whiteflour = 2;
+  const G = {F, mode, pt, k0:pt.k, rp:pt.p*4/pt.k, rf:pt.f*9/pt.k, rc:pt.c*4/pt.k, ml, slots, E:E.map(personKcal), C:E.map(p => !isAdult(p)), med:{}, maxUse:{}, w:(MODES[mode]||MODES.opt).w, hh:{}, sc:{}, cp:{},
+    lim:{}, baseMax:3, kayLim:F.anyHealth ? 1 : 99, fruitMax:3, winter:isWinter(), summer:summerIds(), eco:mode === 'eco', keepP:new Set(state.ecoKeep||[]),
+    bread0:breadFor(0, F, 'home'), fatMax:F.anyHealth ? pt.f*1.1 : Infinity, protOn:autoProtOn(),
+    carbMax:F.diab ? 50 : Infinity, carbLD:Infinity, noFrozen:state.people[0].goal === 'lose', chickMax:7, sumLim:Infinity, noPrep:[], exs:[], adults:[]};
+  // Диабет: завтрак и перекус — не больше 50 г углеводов (жёстко); обед/ужин — не больше max(50, 110% доли дневной нормы углеводов),
+  // иначе при норме жиров калории просто нечем добрать (с макросами «Меньше углеводов» это ≈ 50–55 г).
+  if (F.diab){ G.lim.whiteflour = 2; G.carbLD = Math.max(50, pt.c*1.1*Math.max(shareOf('l', ml), shareOf('d', ml))); }
   if (F.bp){ G.lim.fatty = 1; G.lim.salty = 0; }
+  if (G.winter) G.sumLim = E.reduce((a, p) => a + (isAdult(p) ? SUMMER_LIM.adult : SUMMER_LIM.child), 0);
+  // Заготовка «с вечера» невозможна для дней, вечер перед которыми уже прошёл (сегодня и раньше).
+  const st = parseIso(state.start), today = todayIso();
+  for (let d = 0; d < 7; d++) G.noPrep.push(isoOf(addDays(st, d)) <= today);
   for (const s of slots){ const pl = poolFor(s, false, F); G.med[s] = medianCpk(pl) || 1; const n = Math.max(1, pl.length); G.maxUse[s] = n >= 4 ? 2 : Math.ceil(7/n); }
+  // Курица не больше 4 дней, если есть другие белки (мясо, рыба, печень, индейка, бобовые).
+  const other = ['beef','mutton','fish','liver','turkey','lentils','chickpeas','beans'];
+  if (poolFor('l', false, F).concat(poolFor('d', false, F)).some(r => !vk(r).chick && vk(r).keys.some(k => other.includes(k)))) G.chickMax = 4;
+  E.forEach((p, i) => {
+    if (i > 0 && (p.dislikes||[]).length) G.exs.push(personEx(p));
+    if (isAdult(p) && G.adults.length < 3){ const t = i ? targets(p) : pt; G.adults.push({i, K:G.E[i], tp:t.p, tf:t.f || 1, fm:F.anyHealth ? t.f*1.08 : Infinity, bread:i ? breadFor(i, F, 'home') : G.bread0}); }
+  });
   return G;
+}
+// Кандидаты для автоматического выбора: без заготовки «с вечера» на сегодня/прошлые дни, без пельменей при похудении,
+// в «Экономе» без дорогих продуктов. Если так не остаётся ничего — ослабляем по очереди.
+function autoOK(r, d, G){ return !(r.prep && G.noPrep[d]) && !(G.noFrozen && frozenR(r)) && !premBad(r, G); }
+function candList(s, d, G){
+  const k = s + d; if (G.cp[k]) return G.cp[k];
+  const all = poolFor(s, isWk(d), G.F);
+  let a = all.filter(r => autoOK(r, d, G));
+  if (!a.length) a = all.filter(r => !(r.prep && G.noPrep[d]) && !premBad(r, G));
+  if (!a.length) a = all.filter(r => !(r.prep && G.noPrep[d]));
+  if (!a.length) a = all;
+  return G.cp[k] = a;
 }
 function hhP(r, s, G){ const k = r.id + s; if (k in G.hh) return G.hh[k]; let a = 0; G.E.forEach((kc, i) => { a += portion(r, s, kc, G.ml, G.C[i]); }); return G.hh[k] = a; }
 function slotCost(r, s, G){ const k = r.id + s; if (k in G.sc) return G.sc[k]; return G.sc[k] = servingCost(r)*hhP(r, s, G); }
-// Сводка по всему плану (сколько раз блюдо/основа/фрукт/флаг, сколько граммов продукта), один раз на шаг.
-// Остатки (обед из вчерашнего ужина) в счётчиках разнообразия не учитываются.
-function planSum(plan, lo, G){
-  const used = {}, need = {}, dayP = [], bases = {}, fruits = {}, flags = {}; let kay = 0;
-  for (let dd = 0; dd < 7; dd++){ const day = plan[dd]; dayP.push(0); if (!day) continue;
+// Сводка по всему плану, один раз на шаг. Недельные счётчики (блюдо, ключи, фрукты, флаги) — по готовкам:
+// обед из вчерашнего ужина не считается новой готовкой. Дневные ключи, приём пищи, курица по дням и граммы — по тому, что съедено.
+// light — без граммов и белка (для меню одного человека).
+function planSum(plan, lo, G, light){
+  const used = {}, need = {}, dayP = [], keys = {}, fruits = {}, flags = {}, slotIds = {}, dayKeys = [], dayChick = []; let kay = 0, chickDays = 0, summer = 0;
+  for (let dd = 0; dd < 7; dd++){ const day = plan[dd]; dayP.push(0); dayKeys.push({}); dayChick.push(0); if (!day) continue;
     for (const ss in day){ const r = RM[day[ss]]; if (!r || skipSlot(dd, ss)) continue;
+      const V = vk(r), dk = dayKeys[dd], si = slotIds[ss] || (slotIds[ss] = {});
+      si[r.id] = (si[r.id]||0) + 1;
+      for (const k of V.keys) dk[k] = (dk[k]||0) + 1;
+      if (V.chick) dayChick[dd]++;
       if (!(ss === 'l' && lo[dd])){
-        used[r.id] = (used[r.id]||0) + 1; const b = baseOf(r); bases[b] = (bases[b]||0) + 1;
+        used[r.id] = (used[r.id]||0) + 1;
+        for (const k of V.wkeys) keys[k] = (keys[k]||0) + 1;
         for (const f of fruitIds(r)) fruits[f] = (fruits[f]||0) + 1;
-        for (const f of flagsOf(r)) flags[f] = (flags[f]||0) + 1;
+        for (const f in G.lim) if (flagOn(r, f)) flags[f] = (flags[f]||0) + 1;
         if (kaymakStyle(r)) kay++;
       }
+      if (light) continue;
       const hm = hhP(r, ss, G); for (const id in r.ing) need[id] = (need[id]||0) + r.ing[id]*hm;
       dayP[dd] += r.P*portion(r, ss, G.k0, G.ml);
-    } }
-  return {used, need, dayP, bases, fruits, flags, kay};
+    }
+    if (dayChick[dd]) chickDays++;
+  }
+  if (!light && G.sumLim < Infinity) for (const id of G.summer) summer += need[id] || 0;
+  return {used, need, dayP, keys, fruits, flags, kay, slotIds, dayKeys, dayChick, chickDays, summer};
 }
 // Контекст слота = сводка минус само блюдо в этом слоте.
 function ctxFor(plan, lo, d, s, G, sum = planSum(plan, lo, G)){
-  const cur = RM[plan[d] && plan[d][s]], minus = {}; let dayP = sum.dayP[d], rem = shareOf(s, G.ml), minusId = null, curC = null;
-  if (cur && !skipSlot(d, s)){ const hm = hhP(cur, s, G); for (const id in cur.ing) minus[id] = cur.ing[id]*hm; dayP -= cur.P*portion(cur, s, G.k0, G.ml); if (!(s === 'l' && lo[d])){ minusId = cur.id; curC = cur; } }
+  const at = skipSlot(d, s) ? null : RM[plan[d] && plan[d][s]] || null, minus = {}, atLo = s === 'l' && !!lo[d];
+  let dayP = sum.dayP[d], rem = shareOf(s, G.ml), minusId = null, curC = null, minusSummer = 0;
+  if (at){ const hm = hhP(at, s, G); for (const id in at.ing) minus[id] = at.ing[id]*hm; dayP -= at.P*portion(at, s, G.k0, G.ml); if (!atLo){ minusId = at.id; curC = at; }
+    if (sum.summer) for (const id in at.ing) if (G.summer.has(id)) minusSummer += minus[id]; }
   for (const ss of G.slots) if (ss !== s && !(plan[d] && plan[d][ss])) rem += shareOf(ss, G.ml);
-  return {d, s, used:sum.used, need:sum.need, sum, cur:curC, minus, minusId, needR: Math.max(0, G.pt.p - dayP)*4/(G.k0*rem), wk:isWk(d), plan, lo};
+  return {d, s, used:sum.used, need:sum.need, sum, cur:curC, at, atLo, minus, minusId, minusSummer, needR: Math.max(0, G.pt.p - dayP)*4/(G.k0*rem), wk:isWk(d), plan, lo,
+    loNext: s === 'd' && d < 6 && !!lo[d+1]};
 }
 const usedOf = (c, id) => (c.used[id]||0) - (c.minusId === id ? 1 : 0);
 const needOf = (c, id) => (c.need[id]||0) - (c.minus[id]||0);
-// Разнообразие и лимиты здоровья. lvl 0 — всё, 1 — без недельных лимитов основы/фруктов, 2 — без ограничений.
-function limitsOK(r, c, G, lvl){
-  if (lvl >= 2) return true;
-  const cur = c.cur, b = baseOf(r), day = c.plan[c.d] || {}, S = c.sum;
-  for (const ss in day){ if (ss === c.s || (ss === 'l' && c.lo[c.d]) || skipSlot(c.d, ss)) continue; const o = RM[day[ss]]; if (o && baseOf(o) === b) return false; }
-  for (const f in G.lim) if (hasF(r, f) && (S.flags[f]||0) - (cur && hasF(cur, f) ? 1 : 0) >= G.lim[f]) return false;
-  if (kaymakStyle(r) && S.kay - (cur && kaymakStyle(cur) ? 1 : 0) >= G.kayLim) return false;
-  if (lvl === 0){
-    if ((S.bases[b]||0) - (cur && baseOf(cur) === b ? 1 : 0) >= G.baseMax) return false;
-    for (const f of fruitIds(r)) if ((S.fruits[f]||0) - (cur && cur.ing[f] ? 1 : 0) >= G.fruitMax) return false;
+function nearUse(id, c){ for (const dd of [c.d-1, c.d+1]){ const day = c.plan[dd]; if (!day) continue; for (const ss in day) if (day[ss] === id && !(ss === 'l' && c.lo[dd])) return true; } return false; }
+// Будет ли ужин обедом на завтра (готовлю на 2 дня).
+const willLo = (r, c) => c.s === 'd' && (c.loNext || (state.cook2 && c.d < 6 && !state.noLo[c.d+1] && keepsOf(r) >= 2 && !(c.plan[c.d+1] && c.plan[c.d+1].l && c.plan[c.d+1].l !== (c.at && c.at.id))));
+function vMask(r, c, G){
+  const V = vk(r), S = c.sum, A = c.at ? vk(c.at) : null, C = c.cur, CV = C ? vk(C) : null; let m = 0;
+  for (const f in G.lim) if (flagOn(r, f) && (S.flags[f]||0) - (C && flagOn(C, f) ? 1 : 0) >= G.lim[f]){ m |= B_HEALTH; break; }
+  if (kaymakStyle(r) && S.kay - (C && kaymakStyle(C) ? 1 : 0) >= G.kayLim) m |= B_HEALTH;
+  if (G.carbMax < Infinity){ const cb = r.C*portion(r, c.s, G.k0, G.ml); if (c.s === 'b' || c.s === 's' ? cb > G.carbMax : cb > G.carbLD) m |= (c.s === 'b' || c.s === 's') ? B_HEALTH : B_CARB; }
+  const dk = S.dayKeys[c.d];
+  for (const k of V.keys) if ((dk[k]||0) - (A && A.set.has(k) ? 1 : 0) > 0){ m |= B_DAY; break; }
+  if (c.loNext && c.d < 6){ const nk = S.dayKeys[c.d+1]; for (const k of V.keys) if ((nk[k]||0) - (A && A.set.has(k) ? 1 : 0) > 0){ m |= B_DAY; break; } }
+  if (usedOf(c, r.id) >= (G.maxUse[c.s]||2)) m |= B_DISH;
+  const si = S.slotIds[c.s]; if (si && (si[r.id]||0) - (c.at && c.at.id === r.id ? 1 : 0) > 0) m |= B_SLOT;
+  if (c.loNext && S.slotIds.l && (S.slotIds.l[r.id]||0) - (c.at && c.at.id === r.id ? 1 : 0) > 0) m |= B_SLOT; // завтрашний обед из остатков
+  for (const k of V.wkeys) if ((S.keys[k]||0) - (CV && CV.wset.has(k) ? 1 : 0) >= keyLim(k)){ m |= B_WEEK; break; }
+  if (V.chick && G.chickMax < 7){
+    const lo2 = willLo(r, c) ? 1 : 0, here = S.dayChick[c.d] - (A && A.chick ? 1 : 0) > 0;
+    let days = S.chickDays - (A && A.chick && S.dayChick[c.d] === 1 ? 1 : 0);
+    days += here ? 0 : 1; if (lo2 && c.d < 6 && !(S.dayChick[c.d+1] - (c.loNext && A && A.chick ? 1 : 0) > 0)) days++;
+    if (days > G.chickMax) m |= B_CHICK;
   }
-  return true;
+  if (G.sumLim < Infinity && !c.light){ const g = summerG(r); if (g){ const add = g*(hhP(r, c.s, G) + (willLo(r, c) ? hhP(r, 'l', G) : 0)); if (S.summer - c.minusSummer + add > G.sumLim) m |= B_SUMMER; } }
+  if (nearUse(r.id, c)) m |= B_NEAR;
+  for (const f of fruitIds(r)) if ((S.fruits[f]||0) - (C && C.ing[f] ? 1 : 0) >= G.fruitMax){ m |= B_NEAR; break; }
+  return m;
 }
+// Совместимость (корзина и старые проходы): варианты без нарушений. lvl 1 — без недельных лимитов, 2 — без ограничений.
+const varietyOK = (r, c, G) => !(vMask(r, c, G) & (B_NEAR|B_DISH|B_SLOT));
+function limitsOK(r, c, G, lvl){ if (lvl >= 2) return true; const m = vMask(r, c, G); return !(m & (lvl === 0 ? (B_SUMMER|B_CHICK|B_WEEK|B_CARB|B_DAY|B_HEALTH) : (B_CARB|B_DAY|B_HEALTH))); }
 function effCost(r, s, c, G){
   const ec = c.ec || (c.ec = {}); const v = ec[r.id]; if (v !== undefined) return v;
   return ec[r.id] = effCost0(r, s, c, G);
@@ -1559,23 +1766,25 @@ function score(r, s, c, G){
   const g0 = state.people[0].goal;
   if (g0 === 'health' && r.cu === 'zoh') sc -= .35;
   if (g0 === 'lose' && r.kcal > 750) sc += .3;
-  if (G.F.diab && hasF(r,'whiteflour')) sc += 1;
+  if (G.F.diab){ if (whiteR(r)) sc += 1; const cb = r.C*portion(r, s, G.k0, G.ml); if (cb > 40) sc += (cb - 40)/15; }
   if (G.F.bp){ if (hasF(r,'fatty')) sc += .8; if (hasF(r,'fried')) sc += .8; }
   if (G.F.anyHealth){ if (hasF(r,'heavy')) sc += .3; if (fr > G.rf + .08) sc += (fr - G.rf)*4; }
   if (premBad(r, G)) sc += 2;
+  if (G.noFrozen && frozenR(r)) sc += 1.5;
   sc += summerPen(r, G);
   sc += G.w * (effCost(r, s, c, G)/r.kcal/G.med[s] - 1);
   sc += usedOf(c, r.id)*1.15;
+  for (const ex of G.exs) if (blocks(ex, r)) sc += .25; // кому-то из семьи понадобится отдельное блюдо
   if (state.cook2 && s === 'd' && keepsOf(r) >= 2) sc -= .4;
   return sc;
 }
-function nearUse(id, c){ for (const dd of [c.d-1, c.d+1]){ const day = c.plan[dd]; if (!day) continue; for (const ss in day) if (day[ss] === id && !(ss === 'l' && c.lo[dd])) return true; } return false; }
-const varietyOK = (r, c, G) => usedOf(c, r.id) < (G.maxUse[c.s]||2) && !nearUse(r.id, c);
 function dayOK(day, s, r){
   const hv = hasF(r,'heavy');
   for (const ss in day){ if (ss === s) continue; const o = RM[day[ss]]; if (!o) continue; if (o.id === r.id) return false; if (hv && hasF(o,'heavy')) return false; }
   return true;
 }
+// Ключи блюда уже есть в этом дне (без учёта самого слота s).
+function dayKeyClash(day, s, r){ const K = vk(r).set; for (const ss in day){ if (ss === s) continue; const o = RM[day[ss]]; if (o && vk(o).keys.some(k => K.has(k))) return true; } return false; }
 const dayProt = (day, G) => { let p = 0; for (const s in day){ const r = RM[day[s]]; if (r) p += r.P*portion(r, s, G.k0, G.ml); } return p; };
 const dayFat = (day, G) => { let f = 0; for (const s in day){ const r = RM[day[s]]; if (r) f += r.F*portion(r, s, G.k0, G.ml); } return f; };
 // КБЖУ дня для первого человека — тем же расчётом порций, что и в меню.
@@ -1583,103 +1792,169 @@ function dayMetrics(day, d, G){
   const items = []; for (const s of SLOT_ORDER){ const r = RM[day[s]]; if (r && !skipSlot(d, s)) items.push({s, r}); }
   return balanceFor(items, G.k0, G.ml, false, G.bread0, 0, G.fatMax < Infinity ? G.pt.f*1.08 : Infinity);
 }
-// После подбора: где мало белка (и автодобор включён) или при диабете/давлении жиров больше нормы +10%,
-// сначала меняем блюдо на более белковое / менее жирное. Добавки в меню — только если это не помогло.
+// Нарушение по белку/жирам за день для всех взрослых (до 3): белок ниже 92% цели, при диабете/давлении жиры выше нормы.
+function dayViol(day, d, G){
+  const items = []; for (const s of SLOT_ORDER){ const r = RM[day[s]]; if (r && !skipSlot(d, s)) items.push({s, r}); }
+  let p = 0, f = 0;
+  for (const a of G.adults){ const m = balanceFor(items, a.K, G.ml, false, a.bread, 0, a.fm);
+    if (G.protOn) p += Math.max(0, a.tp*.92 - m.p)/a.tp; if (a.fm < Infinity) f += Math.max(0, m.f - a.tf*1.04)/a.tf*2; }
+  return {v:p + f, p, f};
+}
+// Сначала замена, потом добавка: где мало белка (автодобор включён) или при диабете/давлении жиров больше нормы,
+// меняем блюдо на более белковое / менее жирное, не нарушая разнообразия. Добавка в меню (servings) — только если замены нет.
 function fixPass(plan, lo, G, fixed){
-  const tp = G.pt.p, tf = G.pt.f || 1;
-  const viol = m => (G.protOn ? Math.max(0, tp*.92 - m.p)/tp : 0) + (G.fatMax < Infinity ? Math.max(0, m.f - tf*1.04)/tf*2 : 0);
   for (let d = 0; d < 7; d++){
-    for (let n = 0; n < 3; n++){
-      const day = plan[d], v0 = viol(dayMetrics(day, d, G));
-      if (v0 <= .001) break;
-      const sum = planSum(plan, lo, G); let best = null, bv = v0 - .01;
+    for (let n = 0; n < 5; n++){
+      const v0 = dayViol(plan[d], d, G);
+      if (v0.v <= .001) break;
+      // Жиры выше нормы при диабете/давлении важнее мелких правил разнообразия (соседние дни, тепличные овощи, курица, недельные лимиты, тот же приём в другой день).
+      const low = v0.f > 0 ? (B_NEAR|B_SUMMER|B_CHICK|B_WEEK|B_SLOT) : 0;
+      const sum = planSum(plan, lo, G); let best = null, bv = -.01;
+      // Слоты этого дня; обед из остатков меняем через вчерашний ужин (тогда считаем оба дня).
+      const spots = [];
       for (const s of G.slots){
-        const cur = RM[day[s]]; if (!cur || fixed(d, s) || (s === 'l' && lo[d]) || skipSlot(d, s)) continue;
-        const loNext = s === 'd' && d < 6 && lo[d+1], c = ctxFor(plan, lo, d, s, G, sum), base = score(cur, s, c, G);
-        for (const r of poolFor(s, c.wk, G.F)){
-          if (r.id === cur.id || (loNext && keepsOf(r) < 2) || !dayOK(day, s, r) || premBad(r, G) || !varietyOK(r, c, G) || !limitsOK(r, c, G, 0)) continue;
-          day[s] = r.id; const v = viol(dayMetrics(day, d, G)); day[s] = cur.id;
-          const t = v + Math.max(0, score(r, s, c, G) - base)*.04;
-          if (t < bv){ bv = t; best = {s, id:r.id, loNext}; }
+        if (!plan[d][s] || skipSlot(d, s)) continue;
+        if (s === 'l' && lo[d]){ if (d > 0 && !fixed(d-1, 'd')) spots.push([d-1, 'd']); if (!fixed(d, 'l')) spots.push([d, 'l', true]); }
+        else if (!fixed(d, s)) spots.push([d, s]);
+      }
+      for (const [dd, s, brk] of spots){
+        const day = plan[dd], cur = RM[day[s]]; if (!cur) continue;
+        const loNext = s === 'd' && dd < 6 && lo[dd+1], other = dd !== d ? dd : loNext ? dd + 1 : -1;
+        const vo0 = other >= 0 ? dayViol(plan[other], other, G).v : 0;
+        const c = ctxFor(plan, lo, dd, s, G, sum), base = score(cur, s, c, G), m0 = brk ? 0 : vMask(cur, c, G); // остатки — не новая готовка, новое блюдо должно быть без нарушений
+        const cp = cur.P/cur.kcal, cf = cur.F/cur.kcal;
+        for (const r of candList(s, dd, G)){
+          if (r.id === cur.id || (loNext && keepsOf(r) < 2) || !dayOK(day, s, r) || (loNext && !dayOK(plan[dd+1], 'l', r))) continue;
+          if (!((v0.p > 0 && r.P/r.kcal > cp) || (v0.f > 0 && r.F/r.kcal < cf))) continue;
+          const mr = vMask(r, c, G); if ((mr & ~low) > (m0 & ~low)) continue;
+          day[s] = r.id; if (loNext) plan[dd+1].l = r.id;
+          const dv = dayViol(plan[d], d, G).v - v0.v + (other >= 0 && other !== d ? dayViol(plan[other], other, G).v - vo0 : 0);
+          day[s] = cur.id; if (loNext) plan[dd+1].l = cur.id;
+          const t = dv + Math.max(0, score(r, s, c, G) - base)*.04 + (mr > m0 ? .03 : 0) + (brk ? .02 : 0);
+          if (t < bv){ bv = t; best = {d:dd, s, id:r.id, loNext, brk}; }
         }
       }
       if (!best) break;
-      day[best.s] = best.id; if (best.loNext) plan[d+1].l = best.id;
+      plan[best.d][best.s] = best.id; if (best.loNext) plan[best.d+1].l = best.id; if (best.brk) lo[best.d] = false;
     }
   }
 }
+// Жадный подбор идёт по дням и не видит будущего: потом проходим по слотам с нарушениями и меняем блюдо
+// на вариант со строго меньшей маской (так ни одно правило не ухудшается).
+function repairPass(plan, lo, G, fixed){
+  for (let round = 0; round < 3; round++){
+    let changed = false, sum = planSum(plan, lo, G);
+    for (let d = 0; d < 7; d++) for (const s of G.slots){
+      const cur = RM[plan[d][s]]; if (!cur || fixed(d, s) || (s === 'l' && lo[d]) || skipSlot(d, s)) continue;
+      const c = ctxFor(plan, lo, d, s, G, sum), m0 = vMask(cur, c, G); if (!m0) continue;
+      const loNext = c.loNext; let best = null, bk = Infinity;
+      for (const r of candList(s, d, G)){
+        if (r.id === cur.id || (loNext && keepsOf(r) < 2) || !dayOK(plan[d], s, r)) continue;
+        const m = vMask(r, c, G); if (m >= m0) continue;
+        const k = m*100 + score(r, s, c, G); if (k < bk){ bk = k; best = r; }
+      }
+      if (best){ plan[d][s] = best.id; if (loNext) plan[d+1].l = best.id; changed = true; sum = planSum(plan, lo, G); }
+    }
+    if (!changed) break;
+  }
+}
+// Обед из остатков вчерашнего ужина: не в день, где его основа уже есть.
+function loFits(prev, day){ return dayOK(day, 'l', prev) && !dayKeyClash(day, 'l', prev); }
 function generatePlan(mode, seed, cap, opt = {}){
   const G = genSetup(mode), rnd = mulberry(seed), slots = G.slots, plan = [], lo = [];
   const fixed = opt.fixed || (() => false);
   for (let d = 0; d < 7; d++){ const k = (opt.keep && opt.keep[d]) || {}, day = {}; for (const s of slots) if (k[s] && RM[k[s]]) day[s] = k[s]; plan.push(day); lo.push(false); }
-  for (let d = 0; d < 7; d++){
-    for (const s of slots){
+  const prevWork = altWork; altWork = {plan, lo, G};
+  try {
+    for (let d = 0; d < 7; d++){
       const day = plan[d];
-      if (s === 'l'){
-        lo[d] = false;
-        if (d > 0 && state.cook2 && !state.noLo[d]){
-          const prev = RM[plan[d-1].d];
-          if (prev && keepsOf(prev) >= 2 && (!day.l || day.l === prev.id) && dayOK(day, 'l', prev)){ day.l = prev.id; lo[d] = true; continue; }
-        }
+      // Остатки ставим до остальных приёмов дня, чтобы завтрак/ужин не повторили их основу.
+      if (slots.includes('l') && d > 0 && state.cook2 && !state.noLo[d]){
+        const prev = RM[plan[d-1].d];
+        if (prev && keepsOf(prev) >= 2 && (!day.l || day.l === prev.id) && loFits(prev, day)){ day.l = prev.id; lo[d] = true; }
       }
-      if (day[s]) continue;
-      const c = ctxFor(plan, lo, d, s, G), all = poolFor(s, c.wk, G.F);
-      let cands = all.filter(r => dayOK(day, s, r) && !premBad(r, G));
-      if (cands.length < 3) cands = all.filter(r => dayOK(day, s, r));
-      let best = null, bs = Infinity;
-      for (const pass of [0,1,2]){ for (const r of cands){ if (pass < 2 && !limitsOK(r, c, G, pass)) continue; if (pass === 0 && !varietyOK(r, c, G)) continue; const sc = score(r, s, c, G) + rnd()*.8; if (sc < bs){ bs = sc; best = r; } } if (best) break; }
-      // Совсем мало вариантов: лучше повтор в тот же день, чем пустой приём пищи (но не два тяжёлых)
-      if (!best) for (const r of all){ if (hasF(r,'heavy') && Object.values(day).some(id => id && hasF(RM[id],'heavy'))) continue; const sc = score(r, s, c, G); if (sc < bs){ bs = sc; best = r; } }
-      day[s] = best ? best.id : null;
+      for (const s of slots){
+        if (day[s]) continue;
+        const c = ctxFor(plan, lo, d, s, G);
+        let best = null, bk = Infinity;
+        for (const r of candList(s, d, G)){
+          if (!dayOK(day, s, r)) continue;
+          const k = vMask(r, c, G)*100 + score(r, s, c, G) + rnd()*.8;
+          if (k < bk){ bk = k; best = r; }
+        }
+        // Совсем мало вариантов: лучше повтор в тот же день, чем пустой приём пищи (но не два тяжёлых)
+        if (!best) for (const r of poolFor(s, c.wk, G.F)){ if (hasF(r,'heavy') && Object.values(day).some(id => id && hasF(RM[id],'heavy'))) continue; const k = vMask(r, c, G)*100 + score(r, s, c, G); if (k < bk){ bk = k; best = r; } }
+        day[s] = best ? best.id : null;
+      }
     }
-  }
-  if (!opt.noFix) fixPass(plan, lo, G, fixed);
-  let note = '';
-  if (cap > 0){
-    const banned = new Set();
-    // Жадно снижаем стоимость: лучшая экономия на единицу потери качества,
-    // без повторов в соседние дни, с лимитами разнообразия и здоровья и без потери белка.
-    let total = computeCart(plan, lo).total;
-    const put = (m, id) => { plan[m.d][m.s] = id; if (m.loNext) plan[m.d+1].l = id; };
-    for (let it = 0; it < 60 && total > cap; it++){
-      const moves = [], sum = planSum(plan, lo, G);
-      for (let d = 0; d < 7; d++){
-        const p0 = dayProt(plan[d], G), pMin = Math.min(p0, G.pt.p*.95) - .5, f0 = G.fatMax < Infinity ? dayFat(plan[d], G) : 0;
-        const p1 = d < 6 ? dayProt(plan[d+1], G) : 0, p1Min = Math.min(p1, G.pt.p*.95) - .5;
-        for (const s of slots){
-          const cur = RM[plan[d][s]]; if (!cur || fixed(d,s) || (s === 'l' && lo[d]) || skipSlot(d, s)) continue;
-          const loNext = s === 'd' && d < 6 && lo[d+1], k = loNext ? 2 : 1, curProp = slotCost(cur, s, G) + 15;
-          let c = null, base = 0, curCost = 0;
-          for (const r of poolFor(s, isWk(d), G.F)){
-            if (r.id === cur.id || slotCost(r, s, G) > curProp || banned.has(d+s+r.id) || premBad(r, G)) continue;
-            if (loNext && keepsOf(r) < 2) continue;
-            if (!dayOK(plan[d], s, r)) continue;
-            if (p0 - cur.P*portion(cur,s,G.k0,G.ml) + r.P*portion(r,s,G.k0,G.ml) < pMin) continue;
-            if (loNext && p1 - cur.P*portion(cur,'l',G.k0,G.ml) + r.P*portion(r,'l',G.k0,G.ml) < p1Min) continue;
-            if (f0 && f0 - cur.F*portion(cur,s,G.k0,G.ml) + r.F*portion(r,s,G.k0,G.ml) > Math.max(f0, G.fatMax)) continue;
-            if (!c){ c = ctxFor(plan, lo, d, s, G, sum); base = score(cur, s, c, G); curCost = effCost(cur, s, c, G)*hhP(cur, s, G)*k; }
-            if (!varietyOK(r, c, G) || !limitsOK(r, c, G, 0)) continue;
-            const est = curCost - effCost(r, s, c, G)*hhP(r, s, G)*k;
-            if (est < 1) continue;
-            const loss = Math.max(0, score(r, s, c, G) - base) + .4;
-            moves.push({d, s, id:r.id, prev:cur.id, loNext, loss, val:est/loss});
+    repairPass(plan, lo, G, fixed);
+    if (!opt.noFix) fixPass(plan, lo, G, fixed);
+    let note = '';
+    if (cap > 0){
+      const banned = new Set();
+      // Жадно снижаем стоимость: лучшая экономия на единицу потери качества,
+      // не нарушая разнообразия и здоровья сильнее, чем сейчас, и без потери белка.
+      let total = computeCart(plan, lo).total;
+      const put = (m, id) => { plan[m.d][m.s] = id; if (m.loNext) plan[m.d+1].l = id; };
+      for (let it = 0; it < 60 && total > cap; it++){
+        const moves = [], sum = planSum(plan, lo, G);
+        for (let d = 0; d < 7; d++){
+          const p0 = dayProt(plan[d], G), pMin = Math.min(p0, G.pt.p*.95) - .5, f0 = G.fatMax < Infinity ? dayFat(plan[d], G) : 0;
+          const p1 = d < 6 ? dayProt(plan[d+1], G) : 0, p1Min = Math.min(p1, G.pt.p*.95) - .5;
+          for (const s of slots){
+            const cur = RM[plan[d][s]]; if (!cur || fixed(d,s) || (s === 'l' && lo[d]) || skipSlot(d, s)) continue;
+            const loNext = s === 'd' && d < 6 && lo[d+1], k = loNext ? 2 : 1, curProp = slotCost(cur, s, G) + 15;
+            let c = null, base = 0, curCost = 0, m0 = 0;
+            for (const r of candList(s, d, G)){
+              if (r.id === cur.id || slotCost(r, s, G) > curProp || banned.has(d+s+r.id)) continue;
+              if (loNext && keepsOf(r) < 2) continue;
+              if (!dayOK(plan[d], s, r)) continue;
+              if (p0 - cur.P*portion(cur,s,G.k0,G.ml) + r.P*portion(r,s,G.k0,G.ml) < pMin) continue;
+              if (loNext && p1 - cur.P*portion(cur,'l',G.k0,G.ml) + r.P*portion(r,'l',G.k0,G.ml) < p1Min) continue;
+              if (f0 && f0 - cur.F*portion(cur,s,G.k0,G.ml) + r.F*portion(r,s,G.k0,G.ml) > Math.max(f0, G.fatMax)) continue;
+              if (!c){ c = ctxFor(plan, lo, d, s, G, sum); base = score(cur, s, c, G); curCost = effCost(cur, s, c, G)*hhP(cur, s, G)*k; m0 = vMask(cur, c, G); }
+              if (vMask(r, c, G) > m0) continue;
+              const est = curCost - effCost(r, s, c, G)*hhP(r, s, G)*k;
+              if (est < 1) continue;
+              const loss = Math.max(0, score(r, s, c, G) - base) + .4;
+              moves.push({d, s, id:r.id, prev:cur.id, loNext, loss, val:est/loss});
+            }
           }
         }
+        if (!moves.length) break;
+        moves.sort((a,b) => b.val - a.val);
+        let best = null;
+        for (const m of moves.slice(0, 6)){ // проверяем реальной корзиной (целые упаковки)
+          put(m, m.id); const save = total - computeCart(plan, lo).total; put(m, m.prev);
+          if (save < 2){ banned.add(m.d+m.s+m.id); continue; }
+          const v = save / m.loss; if (!best || v > best.v) best = Object.assign(m, {v});
+        }
+        if (!best) continue;
+        put(best, best.id); total = computeCart(plan, lo).total;
       }
-      if (!moves.length) break;
-      moves.sort((a,b) => b.val - a.val);
-      let best = null;
-      for (const m of moves.slice(0, 6)){ // проверяем реальной корзиной (целые упаковки)
-        put(m, m.id); const save = total - computeCart(plan, lo).total; put(m, m.prev);
-        if (save < 2){ banned.add(m.d+m.s+m.id); continue; }
-        const v = save / m.loss; if (!best || v > best.v) best = Object.assign(m, {v});
-      }
-      if (!best) continue;
-      put(best, best.id); total = computeCart(plan, lo).total;
+      if (total > cap) note = `Уложиться в ${fmt(cap)} сом без потери белка и разнообразия не получилось. Самое экономное подходящее меню стоит ≈ ${fmt(total)} сом.`;
     }
-    if (total > cap) note = `Уложиться в ${fmt(cap)} сом без потери белка и разнообразия не получилось. Самое экономное подходящее меню стоит ≈ ${fmt(total)} сом.`;
-  }
-  return {plan, lo, note};
+    // Повторное использование упаковок (корзина): общий проход, если он есть.
+    if (typeof packReusePass === 'function'){ try { packReusePass(plan, lo, {fixed}); } catch(e){} }
+    for (let d = 0; d < 7; d++){ const o = {}; for (const s of SLOT_ORDER) if (s in plan[d]) o[s] = plan[d][s]; plan[d] = o; }
+    altRecent.unshift({plan, lo, G}); if (altRecent.length > 4) altRecent.length = 4;
+    return {plan, lo, note};
+  } finally { altWork = prevWork; }
+}
+// Для общих проходов (например, корзины): можно ли поставить блюдо id в слот, не нарушив правил сильнее, чем сейчас.
+function planSwapOK(plan, lo, d, s, id, G = genSetup(state.mode)){
+  const r = RM[id], cur = RM[plan[d] && plan[d][s]]; if (!r || !plan[d]) return false;
+  if (!slotOK(r, s, isWk(d), G.F) || !dayOK(plan[d], s, r) || (r.prep && G.noPrep[d] && (!cur || cur.id !== r.id))) return false;
+  if (!cur) return true;
+  const c = ctxFor(plan, lo, d, s, G);
+  return vMask(r, c, G) <= vMask(cur, c, G);
+}
+// Нарушения правил в готовом плане (для проверок и отладки): список {d, s, id, mask}.
+function planIssues(plan = state.plan, lo = state.lo, G = genSetup(state.mode)){
+  const out = [], sum = planSum(plan, lo, G);
+  plan.forEach((day, d) => { for (const s in day){ const r = RM[day[s]]; if (!r || (s === 'l' && lo[d]) || skipSlot(d, s)) continue;
+    const m = vMask(r, ctxFor(plan, lo, d, s, G, sum), G); if (m) out.push({d, s, id:r.id, mask:m, why:maskText(m)}); } });
+  return out;
 }
 function keepCart(){ const keep = {}; computeCart().items.forEach(x => { if (state.cart[x.id]) keep[x.id] = state.cart[x.id]; }); state.cart = keep; }
 function applyRes(res, keepNote){
@@ -1693,26 +1968,24 @@ function regenerate(newSeed){
   applyRes(generatePlan(state.mode, state.seed, capVal()));
   state.dirty = false; state.dirtyKinds = []; state.createdAt = Date.now(); save();
 }
-// Что оставить из текущего меню. strict — ещё и недельные лимиты основы/фруктов (умное обновление).
-// Лимиты здоровья (белая мука, жирное, лепёшка с каймаком) и «одна основа в день» действуют всегда; ручные замены не трогаем.
+// Что оставить из текущего меню. Блюдо остаётся, если не нарушает правил относительно уже оставленных:
+// strict (умное обновление) — никаких; иначе (мгновенная замена при новом запрете) — только «основа раз в день» и лимиты здоровья.
+// Ручные замены не трогаем.
 function keepFrom(pred, strict){
-  const slots = slotList(), keep = state.plan.map(() => ({})), G = genSetup(state.mode);
-  const bases = {}, fruits = {}, flags = {}, heavyDay = [], dayBase = state.plan.map(() => new Set()); let kay = 0;
+  const slots = slotList(), keep = state.plan.map(() => ({})), G = genSetup(state.mode), noLo = keep.map(() => false);
   const order = []; state.plan.forEach((day, d) => slots.forEach(s => order.push([d, s])));
   order.sort((a, b) => (state.man[b[0]+':'+b[1]] ? 1 : 0) - (state.man[a[0]+':'+a[1]] ? 1 : 0));
+  const lim = strict ? 1 : B_DAY;
   for (const [d, s] of order){
     const id = state.plan[d][s], r = RM[id]; if (!r || (s === 'l' && state.lo[d])) continue;
     if (!pred(d, s, r)) continue;
-    const man = !!state.man[d+':'+s], b = baseOf(r);
-    if (hasF(r,'heavy') && heavyDay[d]) continue;
+    const man = !!state.man[d+':'+s];
+    if (hasF(r,'heavy') && Object.values(keep[d]).some(x => hasF(RM[x],'heavy'))) continue;
     if (!man){
-      if (dayBase[d].has(b)) continue;
-      if (Object.keys(G.lim).some(f => hasF(r, f) && (flags[f]||0) >= G.lim[f])) continue;
-      if (kaymakStyle(r) && kay >= G.kayLim) continue;
-      if (strict && ((bases[b]||0) >= G.baseMax || fruitIds(r).some(f => (fruits[f]||0) >= G.fruitMax))) continue;
+      if (!dayOK(keep[d], s, r)) continue;
+      if (vMask(r, ctxFor(keep, noLo, d, s, G), G) >= lim) continue;
     }
-    keep[d][s] = id; dayBase[d].add(b); bases[b] = (bases[b]||0) + 1; if (hasF(r,'heavy')) heavyDay[d] = true;
-    fruitIds(r).forEach(f => { fruits[f] = (fruits[f]||0) + 1; }); flagsOf(r).forEach(f => { flags[f] = (flags[f]||0) + 1; }); if (kaymakStyle(r)) kay++;
+    keep[d][s] = id;
   }
   state.plan.forEach((day, d) => { if (d > 0 && state.lo[d] && day.l && keep[d-1].d === day.l) keep[d].l = day.l; });
   return keep;
@@ -1734,11 +2007,14 @@ function smartUpdate(){
   applyRes(res); state.dirty = false; state.dirtyKinds = []; save();
   return countChanged(old, res.plan);
 }
+// Варианты замены: сначала те, что не нарушают правил разнообразия/здоровья, затем по оценке.
+// Блюда с основой, которая уже есть в этот день, и сверх лимитов здоровья — только если иначе вариантов меньше трёх.
 function replaceOptions(d, s, G = genSetup(state.mode)){
-  const plan = state.plan, cur = plan[d][s], c = ctxFor(plan, state.lo, d, s, G), all = poolFor(s, c.wk, G.F).filter(r => r.id !== cur && dayOK(plan[d], s, r));
-  let list = all.filter(r => limitsOK(r, c, G, 1));
-  if (list.length < 2) list = all;
-  return list.map(r => ({r, sc: score(r, s, c, G) + (varietyOK(r, c, G) && limitsOK(r, c, G, 0) ? 0 : 3)})).sort((a,b) => a.sc - b.sc).slice(0,5).map(x => x.r);
+  const plan = state.plan, cur = plan[d][s], c = ctxFor(plan, state.lo, d, s, G);
+  const all = poolFor(s, c.wk, G.F).filter(r => r.id !== cur && dayOK(plan[d], s, r) && !(r.prep && G.noPrep[d]));
+  const xs = all.map(r => ({r, m:vMask(r, c, G), sc:score(r, s, c, G)})).sort((a, b) => a.m - b.m || a.sc - b.sc);
+  const good = xs.filter(x => x.m < B_DAY);
+  return (good.length >= 3 ? good : xs).slice(0, 5).map(x => x.r);
 }
 const snapshot = () => JSON.parse(JSON.stringify({plan:state.plan, lo:state.lo, man:state.man, noLo:state.noLo, noSnack:state.noSnack}));
 function pickReplace(d, s, id){
@@ -1748,9 +2024,9 @@ function pickReplace(d, s, id){
   if (s === 'l' && state.lo[d]){ state.lo[d] = false; state.noLo[d] = 1; }
   if (s === 'd' && d < 6){
     if (state.lo[d+1]){
-      if (state.cook2 && keepsOf(r) >= 2 && dayOK(plan[d+1], 'l', r)) plan[d+1].l = id;
+      if (state.cook2 && keepsOf(r) >= 2 && loFits(r, plan[d+1])) plan[d+1].l = id;
       else { state.lo[d+1] = false; const opts = replaceOptions(d+1, 'l'); plan[d+1].l = opts[0] ? opts[0].id : null; }
-    } else if (state.cook2 && keepsOf(r) >= 2 && 'l' in plan[d+1] && !state.man[(d+1)+':l'] && !state.noLo[d+1] && dayOK(plan[d+1], 'l', r)){
+    } else if (state.cook2 && keepsOf(r) >= 2 && 'l' in plan[d+1] && !state.man[(d+1)+':l'] && !state.noLo[d+1] && loFits(r, plan[d+1])){
       plan[d+1].l = id; state.lo[d+1] = true;
     }
   }
