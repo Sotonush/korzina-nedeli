@@ -393,6 +393,29 @@ a.btn{text-decoration:none}
 .aa{gap:0.375rem}
 .aa-a{font-family:var(--display)}
 .aa:not([aria-pressed="true"]){font-family:var(--body)}
+/* Шапка онбординга: при нехватке места кнопки уходят на вторую строку, а не за край экрана */
+.ob-top{flex-wrap:wrap;row-gap:0.5rem}
+.ob-top .brand{flex:1 1 10rem;min-width:0}
+.ob-top .eyebrow{min-width:0}
+.ob-ctrl{flex:0 1 auto;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.ob-foot .btn{min-width:0;text-align:center;line-height:1.2}
+.ob-foot .btn-primary{padding-block:0.375rem}
+/* Чьи калории за день показываем */
+.person-sw{gap:0.375rem}
+.person-sw .chip{max-width:100%}
+.batch-tip{font-size:0.8438rem;border-radius:0.75rem;padding:0.625rem 0.75rem;background:var(--herb-soft);color:var(--ink)}
+.cost-basis{display:flex;flex-wrap:wrap;align-items:center;gap:0.375rem;font-size:0.875rem}
+/* Узкие экраны (320–360 px): дни и кнопки карточек не вылезают за край */
+.days{grid-template-columns:repeat(7,minmax(0,1fr))}
+.seg{grid-auto-columns:minmax(0,1fr)}
+.seg button{min-width:0;overflow-wrap:anywhere;hyphens:auto;line-height:1.2;padding-block:0.25rem}
+.sheet .row-between > :first-child{min-width:0;flex:1}
+.sheet .row-between > .icon-btn{flex:none}
+.title{overflow-wrap:break-word;hyphens:auto}
+.sheet .title{overflow-wrap:anywhere}
+.meal-actions{flex-wrap:wrap}
+.meal-actions .btn{flex:1 1 7.5rem;min-width:0}
+@media (max-width:360px){html:not(.big) .days{gap:0.25rem}html:not(.big) .day{font-size:0.75rem}html:not(.big) .day small.kc{font-size:0.5625rem}}
 
 /* Крупный текст: весь интерфейс в rem, поэтому достаточно поднять корневой размер */
 html.big{font-size:120%}

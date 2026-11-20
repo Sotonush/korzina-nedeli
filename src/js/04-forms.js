@@ -26,6 +26,14 @@ const IC = {
 const pressed = b => `aria-pressed="${b ? 'true' : 'false'}"`;
 const big = () => !!state.big;
 const ML = () => big() ? {p:'Белки',f:'Жиры',c:'Углеводы',u:' г'} : {p:'Б',f:'Ж',c:'У',u:''};
+// Порции по-русски: «1 порция», «2 порции», «5 порций», «4,2 порции», без «,0». acc — винительный падеж («готовим 1 порцию», «на 21 порцию»).
+function portionsText(n, acc = false){
+  const v = Math.round((+n || 0)*10)/10;
+  if (Math.abs(v - Math.round(v)) > 1e-9) return `${fmt1(v)} порции`;
+  return `${fmt(v)} ${plural(v, acc ? 'порцию' : 'порция', 'порции', 'порций')}`;
+}
+// Кухонная техника: по умолчанию всё есть (state.equip может отсутствовать в старых сохранениях).
+const equipState = () => Object.assign({blender:true, oven:true}, state.equip && typeof state.equip === 'object' ? state.equip : {});
 function seg(act, options, cur, pre = ''){ return `<div class="seg" role="group">${options.map(([v,l]) => `<button type="button" data-act="${act}" data-v="${pre}${v}" ${pressed(String(cur)===String(v))}>${l}</button>`).join('')}</div>`; }
 function numField(id, label, bind, val, unit, min, max){
   return `<label class="field" for="${id}"><span class="label">${label}</span><div class="input-unit"><input class="input num" id="${id}" type="number" inputmode="decimal" min="${min}" max="${max}" data-bind="${bind}" value="${esc(val)}"><span>${unit}</span></div></label>`;
@@ -50,10 +58,10 @@ function secAbout(){
     <label class="field" for="p0-act"><span class="label">Активность</span>${actSelect('p0-act','p.0.act',p.act)}</label>
     <div class="card flat herb-card">
       ${showGoal ? `<div class="eyebrow">Ваша норма с учётом цели</div>
-      <div class="kcal-big num">${fmt(t.k)} <span class="kcal-unit">ккал в день</span></div>
-      <div class="hint">Белки ${fmt(t.p)} г · жиры ${fmt(t.f)} г · углеводы ${fmt(t.c)} г</div>` :
+      <div class="kcal-big num"><span id="live-k0">${fmt(t.k)}</span> <span class="kcal-unit">ккал в день</span></div>
+      <div class="hint" id="live-m0">${aboutMacros(t)}</div>` :
       `<div class="eyebrow">Ваш расход сейчас</div>
-      <div class="kcal-big num">${fmt(maintKcal(p))} <span class="kcal-unit">ккал в день</span></div>
+      <div class="kcal-big num"><span id="live-maint">${fmt(maintKcal(p))}</span> <span class="kcal-unit">ккал в день</span></div>
       <div class="hint">Столько вы тратите за день. После выбора цели пересчитаем.</div>`}
     </div></div>`;
 }
@@ -81,7 +89,7 @@ function personCard(p, i){
   const dl = (p.dislikes||[]).map(k => DISLIKES[k] ? DISLIKES[k].n.toLowerCase() : '').filter(Boolean);
   const noA = Object.keys(state.allergyWho||{}).filter(a => state.allergies.includes(a) && state.allergyWho[a].includes(p.id)).map(a => ALLERGY[a].toLowerCase());
   return `<div class="person">
-    <div class="person-h"><b>${p.name ? esc(p.name) + ' · ' : ''}${isChild ? 'Ребёнок' : 'Взрослый'} · ${fmt(personKcal(p))} ккал</b><button type="button" class="link-btn" data-act="rmPerson" data-v="${p.id}">Убрать</button></div>
+    <div class="person-h"><b><span id="live-pn${i}">${p.name ? esc(p.name) + ' · ' : ''}</span>${isChild ? 'Ребёнок' : 'Взрослый'} · <span class="num" id="live-pk${i}">${fmt(personKcal(p))}</span> ккал</b><button type="button" class="link-btn" data-act="rmPerson" data-v="${p.id}">Убрать</button></div>
     <div class="grid2"><label class="field" for="p${i}-name"><span class="label">Имя</span><input class="input" id="p${i}-name" type="text" maxlength="24" data-bind="p.${i}.name" value="${esc(p.name)}" placeholder="${isChild?'Арсен':'Бакыт'}"></label>
     ${numField(`p${i}-age`,'Возраст',`p.${i}.age`,p.age,'лет',1,isChild?17:90)}</div>
     <div>${seg('psex', isChild ? [['f','Девочка'],['m','Мальчик']] : [['f','Женщина'],['m','Мужчина']], p.sex, i+':')}</div>
@@ -105,8 +113,18 @@ function secFamily(){
       ${state.people.slice(1).map((p,i) => personCard(p, i+1)).join('')}
       <div class="grid2"><button type="button" class="btn btn-soft" data-act="addPerson" data-v="adult">+ Взрослый</button><button type="button" class="btn btn-soft" data-act="addPerson" data-v="child">+ Ребёнок</button></div>` :
       `<p class="hint">Меню и корзина будут на одного человека.</p>`}
-    <div class="note num">Едят: <b>${n} ${plural(n,'человек','человека','человек')}</b> · вместе ≈ <b>${fmt(total)} ккал</b> в день</div>
+    <div class="note num">Едят: <b>${n} ${plural(n,'человек','человека','человек')}</b> · вместе ≈ <b><span id="live-tot">${fmt(total)}</span> ккал</b> в день</div>
   </div>`;
+}
+const aboutMacros = t => `Белки ${fmt(t.p)} г · жиры ${fmt(t.f)} г · углеводы ${fmt(t.c)} г`;
+// Пока человек печатает возраст, рост или вес, калории в карточках и итог «Едят: …» меняются сразу.
+// Обновляем только текст, поле с фокусом не перерисовываем.
+function liveKcal(){
+  const set = (id, v) => { const n = document.getElementById(id); if (n && n.textContent !== v) n.textContent = v; };
+  const p0 = state.people[0];
+  set('live-k0', fmt(targets(p0).k)); set('live-m0', aboutMacros(targets(p0))); set('live-maint', fmt(maintKcal(p0)));
+  state.people.forEach((p, i) => { set('live-pk' + i, fmt(personKcal(p))); set('live-pn' + i, p.name ? p.name + ' · ' : ''); });
+  set('live-tot', fmt(eaters().reduce((s, p) => s + personKcal(p), 0)));
 }
 function secPrefs(){
   return `<div class="stack-lg">
@@ -119,6 +137,10 @@ function secPrefs(){
     <div class="stack">
       ${toggle('learner', state.learner, 'Я учусь готовить', 'В будни только лёгкие и средние блюда, сложные в выходные')}
       ${toggle('cook2', state.cook2, 'Готовлю на 2 дня', 'Ужин готовим с запасом, на следующий день обед из остатков')}
+    </div>
+    <div class="stack"><h3 class="h2">Что есть на кухне</h3>
+      ${toggle('equip', equipState().blender, 'Есть блендер', 'Если выключить, не предложим блюда, где нужен блендер', 'blender')}
+      ${toggle('equip', equipState().oven, 'Есть духовка', 'Если выключить, не предложим запеканки и другие блюда из духовки', 'oven')}
     </div>
     <div class="stack"><h3 class="h2">Здоровье</h3>
       ${toggle('health', state.health.diab, 'Сахар / диабет', 'Без сладкого и мёда, белая мука не чаще 2 раз в неделю, углеводы видны у каждого блюда', 'diab')}
@@ -149,7 +171,7 @@ function secAllergy(){
 }
 let estCache = {key:'', val:{}};
 function estimates(){
-  const key = JSON.stringify([state.people,state.family,state.macro,state.mf,state.cuisines,state.diet,state.meals,state.quick,state.learner,state.cook2,state.autoProt,state.health,state.dislikes,state.allergies,state.customEx,activeStores(),state.adj,pricesVer,state.start,state.ecoKeep]);
+  const key = JSON.stringify([state.people,state.family,state.macro,state.mf,state.cuisines,state.diet,state.meals,state.quick,state.learner,state.cook2,state.autoProt,state.health,state.dislikes,state.allergies,state.customEx,activeStores(),state.adj,pricesVer,state.start,state.ecoKeep,equipState(),state.chilled]);
   if (estCache.key !== key){ const val = {}; for (const m in MODES){ const r = generatePlan(m, 777, 0); val[m] = computeCart(r.plan, r.lo).total; } estCache = {key, val}; }
   return estCache.val;
 }
@@ -164,7 +186,7 @@ function storePicker(){
   const pairs = pairTotals(), cur = activeStores().slice().sort().join(',');
   return `<div class="chips">${list.map(([k,n])=>`<button type="button" class="chip" data-act="store2" data-v="${k}" ${pressed(state.stores2.includes(k))}>${IC.tick}${esc(n)}</button>`).join('')}</div>
     ${pairs.length > 1 ? `<div class="stack gap6"><span class="label m0">Сравнение пар магазинов</span><div class="pairs">${pairs.map((p, i) => `<button type="button" class="pair" data-act="pair" data-v="${p.stores.join(',')}" ${pressed(p.stores.slice().sort().join(',') === cur)}><span>${esc(p.stores.map(storeName).join(' + '))}${i === 0 ? ' <small>дешевле всего</small>' : ''}</span><b class="num">${fmt(p.total)}</b></button>`).join('')}</div></div>` : ''}
-    <p class="hint">Выберите два магазина или пару из списка. Во второй магазин переносим продукт, только если там дешевле хотя бы на ${SPLIT_MIN} сом или на ${Math.round(SPLIT_PCT*100)}%. Остальное — в первом.</p>`;
+    <p class="hint">Выберите два магазина или пару из списка. Во второй магазин переносим продукт, только если вся покупка там дешевле хотя бы на ${SPLIT_MIN} сом или на ${Math.round(SPLIT_PCT*100)}% (и не меньше чем на ${SPLIT_ABS} сом). Остальное — в первом.</p>`;
 }
 function startChips(){
   const t = parseIso(todayIso()), opts = [0,1,2,3,4,5,6].map(i => addDays(t, i));
@@ -180,13 +202,36 @@ function secBudget(){
     <div class="stack"><h3 class="h2">День покупки</h3>${startChips()}<p class="hint">Меню на 7 дней начнётся с этого дня.</p></div>
     <div class="stack"><div class="section-h"><h3 class="h2">Бюджет на неделю</h3><span class="hint">для ${eaters().length} чел.</span></div>
       <div class="stack gap8">${Object.entries(MODES).map(([k,m])=>`<button type="button" class="option option-row" data-act="mode" data-v="${k}" ${pressed(state.mode===k)}><span class="stack gap2 minw0"><b>${m.n}</b><small>${m.d}</small></span><span class="price">≈ ${fmt(est[k])} сом</span></button>`).join('')}</div>
-      ${state.mode === 'eco' ? `<div class="stack gap6"><span class="hint">В «Экономе» не берём дорогие продукты. Отметьте, что всё-таки любите и хотите оставить:</span><div class="chips">${Object.entries(PREMIUM).map(([k, p]) => `<button type="button" class="chip chip-sm" data-act="ecoKeep" data-v="${k}" ${pressed(state.ecoKeep.includes(k))}>${IC.tick}${p.n}</button>`).join('')}</div></div>` : ''}</div>
+</div>
     <div class="${SD ? '' : 'grid2'}">
       ${numField('cap','Жёсткий лимит (необязательно)','cap',state.cap,'сом',0,100000)}
       ${SD ? '' : `<label class="field" for="adj"><span class="label">Цены в вашем магазине</span>${pickField('adj', 'adj', state.adj, [-15,-10,-5,0,5,10,15].map(v => [v, v===0?'Как средние':(v>0?'+':'')+v+'%']))}</label>`}
     </div>
+    ${capFloor()}
+    ${ecoKeepBlock()}
+    ${chillPicker()}
     <p class="hint">Бюджет считается по целым упаковкам. ${priceSourceLine()}</p>
   </div>`;
+}
+// Под лимитом: минимум на неделю и честное предупреждение, если лимит ниже минимума.
+function capFloor(){
+  const n = eaters().length, min = minCostEst(), cap = capVal();
+  return `<div class="stack gap6"><div class="hint num">Минимум для ${n} ${plural(n,'человека','человек','человек')} на неделю ≈ <b>${fmt(min)}</b> сом</div>
+    ${cap > 0 && cap < min - .5 ? `<div class="warn num">С таким лимитом сбалансированное меню не собрать: не хватает ≈ <b>${fmt(min - cap)}</b> сом.</div>` : ''}</div>`;
+}
+// «Эконом»: что из дорогого оставить — под полем лимита и свёрнуто, чтобы поле не уезжало из-под пальца.
+function ecoKeepBlock(){
+  if (state.mode !== 'eco') return '';
+  const open = !!ui.ecoOpen, on = state.ecoKeep.map(k => PREMIUM[k] && PREMIUM[k].n).filter(Boolean);
+  return `<div class="stack gap6"><button type="button" class="more-btn" data-act="ecoOpen" aria-expanded="${open}"><span>Что оставить в «Экономе»: ${on.length ? esc(on.join(', ')) : 'ничего дорогого'}</span>${IC.chev}</button>
+    ${open ? `<span class="hint">В «Экономе» не берём дорогие продукты. Отметьте, что всё-таки любите и хотите оставить:</span><div class="chips">${Object.entries(PREMIUM).map(([k, p]) => `<button type="button" class="chip chip-sm" data-act="ecoKeep" data-v="${k}" ${pressed(state.ecoKeep.includes(k))}>${IC.tick}${p.n}</button>`).join('')}</div>` : ''}</div>`;
+}
+// Курица: замороженная (дешевле) или охлаждённая; в подсказке — разница цены, если она есть в данных.
+function chillPicker(){
+  if (!chickenIds().length) return '';
+  const df = chillDiff(), ds = df.map(x => Math.round(x.d)), lo = Math.min(...ds), hi = Math.max(...ds), sg = v => (v >= 0 ? '+' : '−') + fmt(Math.abs(v));
+  const hint = df.length ? `Охлаждённая в «${esc(storeName(activeStores()[0]))}»: ${lo === hi ? sg(lo) : sg(lo) + '…' + sg(hi)} сом/кг к цене замороженной.` : 'Охлаждённой курицы пока нет в каталоге — где её нет, посчитаем по замороженной.';
+  return `<div class="stack gap6"><span class="label m0">Курица</span>${seg('chilled', [['0','Замороженная (дешевле)'],['1','Охлаждённая']], chilledOn() ? '1' : '0')}<p class="hint">${hint}</p></div>`;
 }
 function secAccess(){
   return `<div class="stack">${toggle('big', big(), 'Крупный текст', 'Всё на экране станет крупнее, а белки, жиры и углеводы будут подписаны полностью')}</div>`;

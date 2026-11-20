@@ -401,6 +401,29 @@ a.btn{text-decoration:none}
 .aa{gap:0.375rem}
 .aa-a{font-family:var(--display)}
 .aa:not([aria-pressed="true"]){font-family:var(--body)}
+/* Шапка онбординга: при нехватке места кнопки уходят на вторую строку, а не за край экрана */
+.ob-top{flex-wrap:wrap;row-gap:0.5rem}
+.ob-top .brand{flex:1 1 10rem;min-width:0}
+.ob-top .eyebrow{min-width:0}
+.ob-ctrl{flex:0 1 auto;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.ob-foot .btn{min-width:0;text-align:center;line-height:1.2}
+.ob-foot .btn-primary{padding-block:0.375rem}
+/* Чьи калории за день показываем */
+.person-sw{gap:0.375rem}
+.person-sw .chip{max-width:100%}
+.batch-tip{font-size:0.8438rem;border-radius:0.75rem;padding:0.625rem 0.75rem;background:var(--herb-soft);color:var(--ink)}
+.cost-basis{display:flex;flex-wrap:wrap;align-items:center;gap:0.375rem;font-size:0.875rem}
+/* Узкие экраны (320–360 px): дни и кнопки карточек не вылезают за край */
+.days{grid-template-columns:repeat(7,minmax(0,1fr))}
+.seg{grid-auto-columns:minmax(0,1fr)}
+.seg button{min-width:0;overflow-wrap:anywhere;hyphens:auto;line-height:1.2;padding-block:0.25rem}
+.sheet .row-between > :first-child{min-width:0;flex:1}
+.sheet .row-between > .icon-btn{flex:none}
+.title{overflow-wrap:break-word;hyphens:auto}
+.sheet .title{overflow-wrap:anywhere}
+.meal-actions{flex-wrap:wrap}
+.meal-actions .btn{flex:1 1 7.5rem;min-width:0}
+@media (max-width:360px){html:not(.big) .days{gap:0.25rem}html:not(.big) .day{font-size:0.75rem}html:not(.big) .day small.kc{font-size:0.5625rem}}
 
 /* Крупный текст: весь интерфейс в rem, поэтому достаточно поднять корневой размер */
 html.big{font-size:120%}
@@ -1832,35 +1855,78 @@ function addonOptions(i, F){
 }
 // Совместимость: добавки для белка, которые были бы в меню при включённом автодоборе.
 function addonsFrom(sv, plan = state.plan){ return servings(plan, state.lo, true).filter(x => x.add && !x.bread); }
+// Сколько каждого продукта нужно на неделю, для каких блюд и в какие дни (days — по порядку: день, приём, блюдо, граммы).
 function cartNeed(plan, lo){
-  const sv = servings(plan, lo), need = {}, uses = {};
+  const sv = servings(plan, lo), need = {}, uses = {}, days = {};
+  const put = (id, d, s, n, g) => { const l = days[id] || (days[id] = []), u = l.find(y => y.d === d && y.n === n); if (u) u.g += g; else l.push({d, s, n, g}); };
   for (const x of sv){
-    if (x.add){ const id = x.add.id; if (!ING[id]) continue; need[id] = (need[id]||0) + x.add.g; (uses[id] = uses[id] || new Set()).add(x.bread ? 'хлеб к обеду' : 'добрать белок'); continue; }
+    if (x.add){ const id = x.add.id; if (!ING[id]) continue; need[id] = (need[id]||0) + x.add.g; const n = x.bread ? 'хлеб к обеду' : 'добрать белок'; (uses[id] = uses[id] || new Set()).add(n); put(id, x.d, x.s, n, x.add.g); continue; }
     let m = 0; for (const w of x.who) m += w.m;
-    for (const id in x.r.ing) if (ING[id]){ need[id] = (need[id]||0) + x.r.ing[id]*m; (uses[id] = uses[id] || new Set()).add(x.r.n); }
+    for (const id in x.r.ing) if (ING[id]){ const g = x.r.ing[id]*m; need[id] = (need[id]||0) + g; (uses[id] = uses[id] || new Set()).add(x.r.n); put(id, x.d, x.s, x.r.n, g); }
   }
-  return {need, uses};
+  for (const id in days) days[id].sort((a, b) => a.d - b.d || SLOT_ORDER.indexOf(a.s) - SLOT_ORDER.indexOf(b.s));
+  return {need, uses, days};
 }
 const isPantry = id => PANTRY.includes(id) || PANTRY_RE.test(id) || !!(ING[id] && (ING[id].t||[]).includes('spice'));
 function packOf(id, stores){ for (const k of stores){ const it = storeItem(k, id); if (it && it.size !== 'w') return +it.size; } const i = ING[id]; return i && i.sale !== 'w' && +i.sale > 0 ? +i.sale : 1000; }
 const pantryDefault = (id, need, stores) => isPantry(id) || (id === 'flour' && need < .15*packOf(id, stores));
 function homeOf(id, need, stores){ const st = state.cart[id]; if (st && typeof st.h === 'boolean') return st.h; return pantryDefault(id, need, stores); }
-// Во второй магазин переносим, только если там дешевле хотя бы на 30 сом или на 10%.
-const SPLIT_MIN = 30, SPLIT_PCT = .1;
+
+/* ===================== Курица: охлаждённая или замороженная ===================== */
+// state.chilled — переключатель в «Магазин и бюджет». Охлаждённая курица в данных: STORE_ITEMS[магазин]['<id>@chilled'],
+// того же вида {name,size,price,url}. Отдельным продуктом в корзине она не бывает: это другой товар того же продукта.
+const CHILL = '@chilled';
+const chickenIds = () => DISLIKES.chicken ? DISLIKES.chicken.ids.filter(id => ING[id]) : [];
+const chilledOn = () => !!(state.chilled ?? false);
+const wantsChill = id => chilledOn() && chickenIds().includes(id);
+function cartOffer(store, id){
+  if (wantsChill(id)){
+    const it = storeItem(store, id + CHILL);
+    if (it){ const key = store + ':' + id + CHILL, own = state.prices[key]; return {size: it.size === 'w' ? 'w' : +it.size, price: own != null ? own : +it.price, item: it, avg:false, key, custom: own != null, store, chilled:true}; }
+    return Object.assign(offer(store, id), {noChill:true});
+  }
+  return offer(store, id);
+}
+const hasItem = (store, id) => !!(storeItem(store, id) || (wantsChill(id) && storeItem(store, id + CHILL)));
+// Разница цены охлаждённой и замороженной курицы в магазине, сом/кг (только где в данных есть обе).
+function chillDiff(store = activeStores()[0]){
+  const kg = it => +it.price/(it.size === 'w' ? 1 : +it.size/1000), out = [];
+  for (const id of chickenIds()){ const a = storeItem(store, id), b = storeItem(store, id + CHILL); if (a && b) out.push({id, d:kg(b) - kg(a)}); }
+  return out;
+}
+// Покупка нужного количества в магазине. Если в данных у товара есть другие фасовки (it.alt: [{size, price, name?, url?}]),
+// берём ту, что дешевле на это количество, при равной цене — с меньшим остатком.
+function buyAt(store, id, need){
+  const o = cartOffer(store, id), i = ING[id];
+  if (o.size === 'w'){ const q = Math.max(i.cat === 'veg' && i.k < 100 ? 300 : 100, Math.ceil(need/100)*100); return {o, cost:q/1000*o.price, q, packs:0, left:0}; }
+  const pack = o => { const packs = Math.max(1, Math.ceil(need/o.size - .03)); return {o, cost:packs*o.price, q:packs*o.size, packs, left:Math.max(0, packs*o.size - need)}; };
+  let best = pack(o);
+  const alts = o.item && !o.custom && Array.isArray(o.item.alt) ? o.item.alt : [];
+  for (const a of alts){
+    if (!a || !(+a.price > 0) || !(+a.size > 0)) continue;
+    const b = pack(Object.assign({}, o, {size:+a.size, price:+a.price, item:Object.assign({}, o.item, a, {alt:null})}));
+    if (b.cost < best.cost - .01 || (Math.abs(b.cost - best.cost) <= .01 && b.left < best.left)) best = b;
+  }
+  return best;
+}
+// Во второй магазин переносим, только если вся покупка продукта там дешевле хотя бы на 30 сом или на 10%,
+// и в любом случае не меньше чем на 15 сом (иначе картошку переносили ради 3 сом).
+const SPLIT_MIN = 30, SPLIT_PCT = .1, SPLIT_ABS = 15;
+const splitWorth = (save, cost) => save >= SPLIT_ABS && (save >= SPLIT_MIN || save >= cost*SPLIT_PCT);
 function assign(id, need, stores){
-  if (!SD){ const b = buyIn(stores[0], id, need); b.store = stores[0]; return b; }
-  const av = stores.filter(k => storeItem(k, id));
-  if (!av.length){ const b = buyIn(stores[0], id, need); b.store = null; b.approx = true; return b; }
-  let best = buyIn(av[0], id, need); best.store = av[0];
-  for (const k of av.slice(1)){ const b = buyIn(k, id, need), save = best.cost - b.cost; if (save >= SPLIT_MIN || (save > 0 && save >= best.cost*SPLIT_PCT)){ b.store = k; best = b; } }
+  if (!SD){ const b = buyAt(stores[0], id, need); b.store = stores[0]; return b; }
+  const av = stores.filter(k => hasItem(k, id));
+  if (!av.length){ const b = buyAt(stores[0], id, need); b.store = null; b.approx = true; return b; }
+  let best = buyAt(av[0], id, need); best.store = av[0];
+  for (const k of av.slice(1)){ const b = buyAt(k, id, need); if (splitWorth(best.cost - b.cost, best.cost)){ b.store = k; best = b; } }
   return best;
 }
 function computeCart(plan = state.plan, lo = state.lo, stores = pctx().stores){
-  const {need, uses} = cartNeed(plan, lo);
+  const {need, uses, days} = cartNeed(plan, lo);
   const items = [], sub = {}; let total = 0, all = 0, bought = 0, approx = 0;
   for (const id in need){
     const i = ING[id], st = state.cart[id] || {}, best = assign(id, need[id], stores), home = homeOf(id, need[id], stores);
-    items.push(Object.assign(best, {id, i, need:need[id], bought:!!st.b, home, pantry:home && typeof st.h !== 'boolean', dishes:[...(uses[id]||[])]}));
+    items.push(Object.assign(best, {id, i, need:need[id], bought:!!st.b, home, pantry:home && typeof st.h !== 'boolean', dishes:[...(uses[id]||[])], use:days[id] || []}));
     all += best.cost;
     if (!home){ total += best.cost; const k = best.store || 'approx'; sub[k] = (sub[k]||0) + best.cost; if (best.approx) approx += best.cost; }
     if (st.b || home) bought++;
@@ -1869,9 +1935,9 @@ function computeCart(plan = state.plan, lo = state.lo, stores = pctx().stores){
   return {items, total, pay:total, all, bought, sub, stores, approx};
 }
 // Пары магазинов для «Где дешевле»: итог по тем же правилам, основной магазин — тот, с которым дешевле.
-function pairTotals(){
-  if (!SD || SD.keys.length < 2 || !state.plan) return [];
-  const {need} = cartNeed(state.plan, state.lo), out = [], keys = SD.keys;
+function pairTotals(plan = state.plan, lo = state.lo){
+  if (!SD || SD.keys.length < 2 || !plan) return [];
+  const {need} = cartNeed(plan, lo), out = [], keys = SD.keys;
   const cost = st => { let t = 0; for (const id in need){ if (homeOf(id, need[id], st)) continue; t += assign(id, need[id], st).cost; } return t; };
   for (let a = 0; a < keys.length; a++) for (let b = a+1; b < keys.length; b++){
     const ab = cost([keys[a], keys[b]]), ba = cost([keys[b], keys[a]]);
@@ -1879,40 +1945,205 @@ function pairTotals(){
   }
   return out.sort((x, y) => x.total - y.total);
 }
-// Подсказки, если меню не укладывается в лимит: конкретные замены и «убрать перекус» с реальной экономией.
-let tipCache = {key:'', tips:[]};
+
+/* ===================== Честный лимит бюджета ===================== */
+// «Похудеть»: пельмени, чучвару и жареное/жирное тесто экономией не предлагаем.
+const loseGoal = () => eaters().some(p => isAdult(p) && p.goal === 'lose');
+const loseBad = r => !!(r.ing.pelmeni || r.ing.chuchvara || /пельмен|чучвар/i.test(r.n) || (baseOf(r) === 'dough' && (hasF(r,'fried') || hasF(r,'fatty'))));
+const homeKey = () => Object.keys(state.cart).filter(k => state.cart[k] && typeof state.cart[k].h === 'boolean').map(k => k + (state.cart[k].h ? 1 : 0)).join();
+// Минимум на неделю: самое экономное сбалансированное меню («Эконом», жадное удешевление без потери белка и разнообразия).
+let minCache = {key:'', sd:null, val:0};
+function minCostEst(){
+  const key = JSON.stringify([state.people, state.family, state.macro, state.mf, state.cuisines, state.diet, state.meals, state.quick, state.learner, state.cook2, state.autoProt, state.health, state.dislikes, state.allergies, state.customEx, activeStores(), state.adj, pricesVer, state.start, state.ecoKeep, chilledOn(), state.prices, homeKey()]);
+  if (minCache.key !== key || minCache.sd !== SD){ const r = generatePlan('eco', 777, 1); minCache = {key, sd:SD, val:computeCart(r.plan, r.lo).total}; }
+  // если текущее меню уже дешевле — минимум не выше него
+  return state.plan && state.onboarded ? Math.min(minCache.val, computeCart().total) : minCache.val;
+}
+// Подсказки, если меню не укладывается в лимит. Подбираем по очереди (каждая следующая — уже после предыдущих),
+// save у подсказки — экономия, если применить только её; total — реальная экономия, если применить все вместе.
+let tipCache = {key:'', tips:[], total:0};
 function capTips(){
   const cap = capVal(); if (!cap || !state.plan) return [];
-  const key = JSON.stringify([state.plan, state.lo, state.noSnack, cap, pricesVer, activeStores(), filterCtx().key, state.mode, state.cart, state.people, state.family, state.meals, state.ecoKeep, state.prices, state.autoProt]);
-  if (tipCache.key === key) return tipCache.tips;
-  const base = computeCart().total, tips = [];
+  const key = JSON.stringify([state.plan, state.lo, state.noSnack, cap, pricesVer, activeStores(), filterCtx().key, state.mode, state.cart, state.people, state.family, state.meals, state.ecoKeep, state.prices, state.autoProt, chilledOn(), state.split, SD ? SD.keys : 0]);
+  if (tipCache.key === key && tipCache.sd === SD) return tipCache.tips;
+  const plan = state.plan, lo = state.lo, base = computeCart().total, tips = []; let total = 0;
   if (base > cap){
-    const G = genSetup(state.mode), plan = state.plan, lo = state.lo, cands = [];
+    const G = genSetup(state.mode), lose = loseGoal(), sum = planSum(plan, lo, G), cands = [];
     for (let d = 0; d < 7; d++) for (const s of SLOT_ORDER){
       const cur = RM[plan[d] && plan[d][s]]; if (!cur || (s === 'l' && lo[d]) || skipSlot(d, s)) continue;
-      const loNext = s === 'd' && d < 6 && lo[d+1];
-      const best = replaceOptions(d, s, G).filter(r => !loNext || keepsOf(r) >= 2).map(r => ({r, est:(slotCost(cur, s, G) - slotCost(r, s, G))*(loNext ? 2 : 1)})).sort((a, b) => b.est - a.est)[0];
-      if (best && best.est > 10) cands.push({d, s, id:best.r.id, prev:cur.id, loNext, est:best.est});
+      const loNext = s === 'd' && d < 6 && lo[d+1], k = loNext ? 2 : 1, cc = slotCost(cur, s, G);
+      const ok = r => (!loNext || keepsOf(r) >= 2) && !(lose && loseBad(r)) && !premBad(r, G);
+      const seen = new Set(), add = r => { if (seen.has(r.id)) return; seen.add(r.id); const est = (cc - slotCost(r, s, G))*k; if (est > 5) cands.push({d, s, id:r.id, prev:cur.id, loNext, est}); };
+      replaceOptions(d, s, G).filter(ok).forEach(add);
+      // и пара самых дешёвых из подходящих (те же правила разнообразия и здоровья, качество не сильно хуже)
+      const c = ctxFor(plan, lo, d, s, G, sum), sc0 = score(cur, s, c, G);
+      poolFor(s, c.wk, G.F).filter(r => r.id !== cur.id && slotCost(r, s, G) < cc - 5 && ok(r) && dayOK(plan[d], s, r) && varietyOK(r, c, G) && limitsOK(r, c, G, 0) && score(r, s, c, G) - sc0 < 2.5)
+        .sort((a, b) => slotCost(a, s, G) - slotCost(b, s, G)).slice(0, 2).forEach(add);
     }
     cands.sort((a, b) => b.est - a.est);
-    const seen = new Set();
-    for (const m of cands){
-      if (seen.has(m.prev) || seen.has('to:' + m.id) || tips.length >= 3) continue;
-      const a = plan[m.d][m.s], nl = m.loNext ? plan[m.d+1].l : null;
-      plan[m.d][m.s] = m.id; if (m.loNext) plan[m.d+1].l = m.id;
-      const save = base - computeCart().total;
-      plan[m.d][m.s] = a; if (m.loNext) plan[m.d+1].l = nl;
-      if (save >= 10){ tips.push({kind:'swap', d:m.d, s:m.s, id:m.id, prev:m.prev, save}); seen.add(m.prev); seen.add('to:' + m.id); }
-    }
-    if (plan[0] && 's' in plan[0]){
+    const done = [], busy = new Set();
+    const cnt = id => { let n = 0; plan.forEach((day, d) => { for (const s in day) if (day[s] === id && !(s === 'l' && lo[d]) && !skipSlot(d, s)) n++; }); return n; };
+    const near = (id, d) => [d-1, d+1].some(dd => { const day = plan[dd]; if (!day) return false; for (const s in day) if (day[s] === id && !(s === 'l' && lo[dd])) return true; return false; });
+    const baseCnt = b => { let n = 0; plan.forEach((day, d) => { for (const s in day){ const r = RM[day[s]]; if (r && !(s === 'l' && lo[d]) && !skipSlot(d, s) && baseOf(r) === b) n++; } }); return n; };
+    const fits = m => { const b = baseOf(RM[m.id]); return cnt(m.id) < 2 && !near(m.id, m.d) && baseCnt(b) - (baseOf(RM[m.prev]) === b ? 1 : 0) < G.baseMax; };
+    let cur = base;
+    try {
+      for (let n = 0; n < 4 && cur > cap; n++){
+        let best = null;
+        for (const m of cands.filter(m => !busy.has(m.d) && !(m.s === 'd' && busy.has(m.d+1)) && plan[m.d][m.s] === m.prev && fits(m)).slice(0, 8)){
+          const undo = simPick(m.d, m.s, m.id), save = cur - computeCart().total; undo();
+          if (save >= 10 && (!best || save > best.save)) best = Object.assign({}, m, {save});
+        }
+        if (!best) break;
+        const nl = best.d < 6 && plan[best.d+1] ? plan[best.d+1].l : null; best.undo = simPick(best.d, best.s, best.id); done.push(best); busy.add(best.d);
+        if (best.d < 6 && plan[best.d+1] && plan[best.d+1].l !== nl) busy.add(best.d+1); cur -= best.save;
+        tips.push({kind:'swap', d:best.d, s:best.s, id:best.id, prev:best.prev});
+      }
       const sn = [];
-      for (let d = 0; d < 7; d++){ if (!RM[plan[d].s] || skipSlot(d, 's')) continue; state.noSnack[d] = 1; const save = base - computeCart().total; delete state.noSnack[d]; if (save >= 10) sn.push({kind:'snack', d, save}); }
-      sn.sort((a, b) => b.save - a.save).slice(0, 2).forEach(t => tips.push(t));
+      if (cur > cap && plan[0] && 's' in plan[0]) for (let d = 0; d < 7; d++){
+        if (!RM[plan[d].s] || skipSlot(d, 's')) continue;
+        state.noSnack[d] = 1; const save = cur - computeCart().total; delete state.noSnack[d];
+        if (save >= 10) sn.push({kind:'snack', d, save});
+      }
+      sn.sort((a, b) => b.save - a.save).slice(0, 2).forEach(t => { if (cur <= cap) return; state.noSnack[t.d] = 1; tips.push({kind:'snack', d:t.d}); cur = computeCart().total; });
+      // Два магазина: конкретная пара и реальная экономия
+      if (cur > cap && SD && SD.keys.length > 1 && !state.split){
+        const p = pairTotals(plan, lo)[0], save = p ? cur - p.total : 0;
+        if (save >= 10){ tips.push({kind:'split', stores:p.stores}); cur = p.total; }
+      }
+      total = Math.max(0, base - cur);
+    } finally {
+      for (const t of tips) if (t.kind === 'snack') delete state.noSnack[t.d];
+      for (let i = done.length - 1; i >= 0; i--) done[i].undo();
     }
-    tips.sort((a, b) => b.save - a.save);
+    // Экономия каждой подсказки отдельно (если нажать «Применить» только её)
+    for (const t of tips){
+      if (t.kind === 'swap'){ const undo = simPick(t.d, t.s, t.id); t.save = base - computeCart().total; undo(); }
+      else if (t.kind === 'snack'){ state.noSnack[t.d] = 1; t.save = base - computeCart().total; delete state.noSnack[t.d]; }
+      else t.save = base - computeCart(plan, lo, t.stores).total;
+    }
+    // Все оставленные подсказки вместе, в том же порядке, — реальная общая экономия.
+    const kept = tips.filter(t => t.save >= 10), undos = []; let st = undefined;
+    if (kept.length !== tips.length){
+      try {
+        for (const t of kept){ if (t.kind === 'swap') undos.push(simPick(t.d, t.s, t.id)); else if (t.kind === 'snack') state.noSnack[t.d] = 1; else st = t.stores; }
+        total = Math.max(0, base - computeCart(plan, lo, st || pctx().stores).total);
+      } finally { for (const t of kept) if (t.kind === 'snack') delete state.noSnack[t.d]; for (let i = undos.length - 1; i >= 0; i--) undos[i](); }
+    }
+    tips.length = 0; kept.sort((a, b) => b.save - a.save).forEach(t => tips.push(t));
   }
-  tipCache = {key, tips}; return tips;
+  tipCache = {key, sd:SD, tips, total}; return tipCache.tips;
 }
+// Замена блюда в плане так же, как её сделает pickReplace (обед из остатков на завтра), без отметок и сохранения. Возвращает отмену.
+function simPick(d, s, id){
+  const plan = state.plan, lo = state.lo, r = RM[id], day = plan[d], nx = plan[d+1];
+  const old = {v:day[s], lod:lo[d], nl:nx ? nx.l : undefined, hasNl:!!nx && 'l' in nx, nlo:lo[d+1]};
+  day[s] = id; if (s === 'l' && lo[d]) lo[d] = false;
+  if (s === 'd' && d < 6 && nx){
+    if (lo[d+1]){
+      if (state.cook2 && keepsOf(r) >= 2 && dayOK(nx, 'l', r)) nx.l = id;
+      else { lo[d+1] = false; const o = replaceOptions(d+1, 'l'); nx.l = o[0] ? o[0].id : null; }
+    } else if (state.cook2 && keepsOf(r) >= 2 && 'l' in nx && !state.man[(d+1)+':l'] && !state.noLo[d+1] && dayOK(nx, 'l', r)){ nx.l = id; lo[d+1] = true; }
+  }
+  return () => { day[s] = old.v; lo[d] = old.lod; if (nx){ if (old.hasNl) nx.l = old.nl; else delete nx.l; } if (d < 6) lo[d+1] = old.nlo; };
+}
+// Сводка для экранов: минимум на неделю, текущая сумма, лимит, нехватка, подсказки и сколько не хватит даже после них.
+function budgetReport(){
+  const cap = capVal(), minCost = minCostEst(), current = state.plan ? computeCart().total : 0;
+  const shortfall = cap > 0 ? Math.max(0, current - cap) : 0;
+  const tips = shortfall > 0 ? capTips() : [], tipsTotal = tips.length ? tipCache.total : 0;
+  const stillShort = shortfall > 0 ? Math.max(0, current - tipsTotal - cap) : 0;
+  return {minCost, current, cap, shortfall, tips, tipsTotal, stillShort, belowMin:cap > 0 && cap < minCost - .5, minGap:cap > 0 ? Math.max(0, minCost - cap) : 0, people:eaters().length};
+}
+
+/* ===================== Целые упаковки ===================== */
+// После сборки меню: если от открытой упаковки остаётся много (≥ 40% упаковки и ≥ 60 сом), пробуем заменить
+// другое блюдо недели (тот же приём пищи, все фильтры и правила разнообразия/здоровья планировщика) на блюдо
+// с этим продуктом — только если общая сумма корзины от этого уменьшается. Меняет план на месте.
+// Вызов: packReusePass(res) где res = {plan, lo}, или packReusePass(plan, lo, {fixed:(d, s) => bool}).
+const REUSE_PCT = .4, REUSE_SOM = 60, REUSE_MIN_SAVE = 15;
+const leftVal = x => x.left*x.o.price/x.o.size;
+function bigLeftovers(cart){ return cart.items.filter(x => !x.home && x.packs >= 1 && x.o.size !== 'w' && x.left >= x.o.size*REUSE_PCT && leftVal(x) >= REUSE_SOM).sort((a, b) => leftVal(b) - leftVal(a)); }
+function packReusePass(a, b, opts = {}){
+  const plan = Array.isArray(a) ? a : a && a.plan, lo = (Array.isArray(a) ? b : a && a.lo) || [];
+  const out = {swaps:[], saved:0};
+  if (!Array.isArray(plan) || plan.length !== 7 || plan.some(d => !d)) return out;
+  if (!Array.isArray(a) && b && typeof b === 'object' && !Array.isArray(b)) opts = b;
+  const fixed = opts.fixed || ((d, s) => !!(state.man && state.man[d+':'+s]));
+  const G = genSetup(state.mode), lose = loseGoal(), slots = G.slots;
+  const put = (m, id) => { plan[m.d][m.s] = id; if (m.loNext) plan[m.d+1].l = id; };
+  let cart = computeCart(plan, lo); const touched = new Set();
+  for (let it = 0; it < 3; it++){
+    const big = bigLeftovers(cart); if (!big.length) break;
+    const sum = planSum(plan, lo, G), moves = [];
+    for (const x of big.slice(0, 4)){
+      const id = x.id;
+      for (let d = 0; d < 7; d++){
+        const p0 = dayProt(plan[d], G), pMin = Math.min(p0, G.pt.p*.95) - .5, f0 = G.fatMax < Infinity ? dayFat(plan[d], G) : 0;
+        for (const s of slots){
+          const cur = RM[plan[d][s]]; if (!cur || cur.ing[id] || fixed(d, s) || touched.has(d + s) || (s === 'l' && lo[d]) || skipSlot(d, s)) continue;
+          const loNext = s === 'd' && d < 6 && lo[d+1]; let c = null, base = 0;
+          for (const r of poolFor(s, isWk(d), G.F)){
+            if (!r.ing[id] || r.id === cur.id || premBad(r, G) || (loNext && keepsOf(r) < 2) || (lose && loseBad(r)) || !dayOK(plan[d], s, r)) continue;
+            if (r.ing[id]*hhP(r, s, G)*(loNext ? 2 : 1) > x.left*1.05) continue; // новая упаковка не нужна
+            if (p0 - cur.P*portion(cur, s, G.k0, G.ml) + r.P*portion(r, s, G.k0, G.ml) < pMin) continue;
+            if (f0 && f0 - cur.F*portion(cur, s, G.k0, G.ml) + r.F*portion(r, s, G.k0, G.ml) > Math.max(f0, G.fatMax)) continue;
+            if (!c){ c = ctxFor(plan, lo, d, s, G, sum); base = score(cur, s, c, G); }
+            if (!varietyOK(r, c, G) || !limitsOK(r, c, G, 0)) continue;
+            const loss = Math.max(0, score(r, s, c, G) - base);
+            if (loss > 1.2) continue;
+            if (typeof planSwapOK === 'function' && !planSwapOK(plan, lo, d, s, r.id, G)) continue; // общие правила планировщика
+            moves.push({d, s, id:r.id, prev:cur.id, loNext, ing:id, loss});
+          }
+        }
+      }
+    }
+    if (!moves.length) break;
+    moves.sort((m1, m2) => m1.loss - m2.loss);
+    let best = null;
+    for (const m of moves.slice(0, 12)){
+      put(m, m.id); const nc = computeCart(plan, lo); put(m, m.prev);
+      const save = cart.total - nc.total, nx = nc.items.find(y => y.id === m.ing), ox = cart.items.find(y => y.id === m.ing);
+      if (save < REUSE_MIN_SAVE || !nx || !ox || nx.left >= ox.left) continue;
+      const v = save/(m.loss + .4); if (!best || v > best.v) best = Object.assign(m, {v, save, nc});
+    }
+    if (!best) break;
+    put(best, best.id); cart = best.nc; touched.add(best.d + best.s); if (best.loNext) touched.add((best.d + 1) + 'l');
+    out.swaps.push({d:best.d, s:best.s, from:best.prev, to:best.id, ing:best.ing, save:best.save}); out.saved += best.save;
+  }
+  return out;
+}
+// Остаток открытой упаковки: куда он пойдёт дальше на неделе.
+function reuseText(x){
+  if (x.o.size === 'w' || x.packs !== 1 || !x.use || x.use.length < 2) return '';
+  const first = x.use[0], rest = x.q - x.use.filter(u => u.d === first.d).reduce((a, u) => a + u.g, 0);
+  const later = x.use.filter(u => u.d > first.d); if (!later.length || rest < x.o.size*REUSE_PCT) return '';
+  const amt = x.i.pc ? (Math.floor(rest/x.i.pc) >= 1 ? `${Math.floor(rest/x.i.pc)} ${x.i.pcName}` : '') : qty(x.id, Math.round(rest/10)*10);
+  if (!amt) return '';
+  const nx = later[0], more = new Set(later.map(u => u.n + u.d)).size - 1;
+  return `останется ≈ ${amt} — пойдёт в «${nx.n}» (${DAYS_SHORT[dowOf(addDays(parseIso(state.start), nx.d))]})${more > 0 ? ` и ещё ${more}` : ''}`;
+}
+// Стоимость слота в листе замены на одной основе: ужин «на 2 дня» = ужин + обед завтра. r — блюдо для сравнения
+// (по умолчанию текущее). {cost, days, leftover?, note?}: days 2 — на 2 дня; leftover — это обед из вчерашнего ужина.
+function slotCostBasis(d, s, r, G = genSetup(state.mode)){
+  const plan = state.plan, cur = RM[plan && plan[d] && plan[d][s]]; r = typeof r === 'string' ? RM[r] : (r || cur);
+  if (!r) return {cost:0, days:1};
+  if (s === 'l' && state.lo[d] && r === cur) return {cost:0, days:1, leftover:true};
+  const two = s === 'd' && d < 6 && !!state.lo[d+1];
+  if (two && keepsOf(r) >= 2) return {cost:slotCost(r, 'd', G) + slotCost(r, 'l', G), days:2};
+  if (two) return {cost:slotCost(r, s, G), days:1, note:'не хранится — обед на завтра подберём отдельно'};
+  return {cost:slotCost(r, s, G), days:1};
+}
+// Нажатия в разделах корзины/бюджета. Если в общем ACT (06-render.js) появится обработчик с тем же именем — работает он.
+const CART_ACT = {
+  chilled:v => { state.chilled = v === '1'; tipCache.key = ''; if (typeof estCache !== 'undefined') estCache.key = ''; save(); render(); },
+  ecoOpen:() => { ui.ecoOpen = !ui.ecoOpen; render(); }
+};
+document.addEventListener('click', e => {
+  const el = e.target && e.target.closest ? e.target.closest('[data-act]') : null; if (!el) return;
+  const a = el.dataset.act, fn = CART_ACT[a]; if (!fn || (typeof ACT !== 'undefined' && ACT[a])) return;
+  e.preventDefault(); fn(el.dataset.v, el);
+});
 function amountText(id, g){
   const i = ING[id]; if (!i) return '';
   if (i.pc) return fmt1(Math.max(.5, Math.round(g/i.pc*2)/2)) + ' ' + i.pcName;
@@ -1961,7 +2192,7 @@ function twoDay(d, sv){
   const today = r1(sumOf(sv.find(y => y.d === d && y.s === 'd' && !y.alt && !y.add))), tom = r1(sumOf(sv.find(y => y.d === d+1 && y.s === 'l' && !y.alt && !y.add)));
   return {today, tom, total:r1(today + tom)};
 }
-const twoDayText = t => `Готовим ${fmtD(t.total)} порции: ${fmtD(t.today)} сегодня + ${fmtD(t.tom)} завтра`;
+const twoDayText = t => `Готовим ${portionsText(t.total, true)}: ${fmt1(t.today)} сегодня + ${fmt1(t.tom)} завтра`;
 
 /* ===================== Прогноз веса ===================== */
 function currentWeight(){ const l = state.wlog; return l.length ? l[l.length-1].w : +state.people[0].weight || 70; }
@@ -2016,6 +2247,14 @@ const IC = {
 const pressed = b => `aria-pressed="${b ? 'true' : 'false'}"`;
 const big = () => !!state.big;
 const ML = () => big() ? {p:'Белки',f:'Жиры',c:'Углеводы',u:' г'} : {p:'Б',f:'Ж',c:'У',u:''};
+// Порции по-русски: «1 порция», «2 порции», «5 порций», «4,2 порции», без «,0». acc — винительный падеж («готовим 1 порцию», «на 21 порцию»).
+function portionsText(n, acc = false){
+  const v = Math.round((+n || 0)*10)/10;
+  if (Math.abs(v - Math.round(v)) > 1e-9) return `${fmt1(v)} порции`;
+  return `${fmt(v)} ${plural(v, acc ? 'порцию' : 'порция', 'порции', 'порций')}`;
+}
+// Кухонная техника: по умолчанию всё есть (state.equip может отсутствовать в старых сохранениях).
+const equipState = () => Object.assign({blender:true, oven:true}, state.equip && typeof state.equip === 'object' ? state.equip : {});
 function seg(act, options, cur, pre = ''){ return `<div class="seg" role="group">${options.map(([v,l]) => `<button type="button" data-act="${act}" data-v="${pre}${v}" ${pressed(String(cur)===String(v))}>${l}</button>`).join('')}</div>`; }
 function numField(id, label, bind, val, unit, min, max){
   return `<label class="field" for="${id}"><span class="label">${label}</span><div class="input-unit"><input class="input num" id="${id}" type="number" inputmode="decimal" min="${min}" max="${max}" data-bind="${bind}" value="${esc(val)}"><span>${unit}</span></div></label>`;
@@ -2040,10 +2279,10 @@ function secAbout(){
     <label class="field" for="p0-act"><span class="label">Активность</span>${actSelect('p0-act','p.0.act',p.act)}</label>
     <div class="card flat herb-card">
       ${showGoal ? `<div class="eyebrow">Ваша норма с учётом цели</div>
-      <div class="kcal-big num">${fmt(t.k)} <span class="kcal-unit">ккал в день</span></div>
-      <div class="hint">Белки ${fmt(t.p)} г · жиры ${fmt(t.f)} г · углеводы ${fmt(t.c)} г</div>` :
+      <div class="kcal-big num"><span id="live-k0">${fmt(t.k)}</span> <span class="kcal-unit">ккал в день</span></div>
+      <div class="hint" id="live-m0">${aboutMacros(t)}</div>` :
       `<div class="eyebrow">Ваш расход сейчас</div>
-      <div class="kcal-big num">${fmt(maintKcal(p))} <span class="kcal-unit">ккал в день</span></div>
+      <div class="kcal-big num"><span id="live-maint">${fmt(maintKcal(p))}</span> <span class="kcal-unit">ккал в день</span></div>
       <div class="hint">Столько вы тратите за день. После выбора цели пересчитаем.</div>`}
     </div></div>`;
 }
@@ -2071,7 +2310,7 @@ function personCard(p, i){
   const dl = (p.dislikes||[]).map(k => DISLIKES[k] ? DISLIKES[k].n.toLowerCase() : '').filter(Boolean);
   const noA = Object.keys(state.allergyWho||{}).filter(a => state.allergies.includes(a) && state.allergyWho[a].includes(p.id)).map(a => ALLERGY[a].toLowerCase());
   return `<div class="person">
-    <div class="person-h"><b>${p.name ? esc(p.name) + ' · ' : ''}${isChild ? 'Ребёнок' : 'Взрослый'} · ${fmt(personKcal(p))} ккал</b><button type="button" class="link-btn" data-act="rmPerson" data-v="${p.id}">Убрать</button></div>
+    <div class="person-h"><b><span id="live-pn${i}">${p.name ? esc(p.name) + ' · ' : ''}</span>${isChild ? 'Ребёнок' : 'Взрослый'} · <span class="num" id="live-pk${i}">${fmt(personKcal(p))}</span> ккал</b><button type="button" class="link-btn" data-act="rmPerson" data-v="${p.id}">Убрать</button></div>
     <div class="grid2"><label class="field" for="p${i}-name"><span class="label">Имя</span><input class="input" id="p${i}-name" type="text" maxlength="24" data-bind="p.${i}.name" value="${esc(p.name)}" placeholder="${isChild?'Арсен':'Бакыт'}"></label>
     ${numField(`p${i}-age`,'Возраст',`p.${i}.age`,p.age,'лет',1,isChild?17:90)}</div>
     <div>${seg('psex', isChild ? [['f','Девочка'],['m','Мальчик']] : [['f','Женщина'],['m','Мужчина']], p.sex, i+':')}</div>
@@ -2095,8 +2334,18 @@ function secFamily(){
       ${state.people.slice(1).map((p,i) => personCard(p, i+1)).join('')}
       <div class="grid2"><button type="button" class="btn btn-soft" data-act="addPerson" data-v="adult">+ Взрослый</button><button type="button" class="btn btn-soft" data-act="addPerson" data-v="child">+ Ребёнок</button></div>` :
       `<p class="hint">Меню и корзина будут на одного человека.</p>`}
-    <div class="note num">Едят: <b>${n} ${plural(n,'человек','человека','человек')}</b> · вместе ≈ <b>${fmt(total)} ккал</b> в день</div>
+    <div class="note num">Едят: <b>${n} ${plural(n,'человек','человека','человек')}</b> · вместе ≈ <b><span id="live-tot">${fmt(total)}</span> ккал</b> в день</div>
   </div>`;
+}
+const aboutMacros = t => `Белки ${fmt(t.p)} г · жиры ${fmt(t.f)} г · углеводы ${fmt(t.c)} г`;
+// Пока человек печатает возраст, рост или вес, калории в карточках и итог «Едят: …» меняются сразу.
+// Обновляем только текст, поле с фокусом не перерисовываем.
+function liveKcal(){
+  const set = (id, v) => { const n = document.getElementById(id); if (n && n.textContent !== v) n.textContent = v; };
+  const p0 = state.people[0];
+  set('live-k0', fmt(targets(p0).k)); set('live-m0', aboutMacros(targets(p0))); set('live-maint', fmt(maintKcal(p0)));
+  state.people.forEach((p, i) => { set('live-pk' + i, fmt(personKcal(p))); set('live-pn' + i, p.name ? p.name + ' · ' : ''); });
+  set('live-tot', fmt(eaters().reduce((s, p) => s + personKcal(p), 0)));
 }
 function secPrefs(){
   return `<div class="stack-lg">
@@ -2109,6 +2358,10 @@ function secPrefs(){
     <div class="stack">
       ${toggle('learner', state.learner, 'Я учусь готовить', 'В будни только лёгкие и средние блюда, сложные в выходные')}
       ${toggle('cook2', state.cook2, 'Готовлю на 2 дня', 'Ужин готовим с запасом, на следующий день обед из остатков')}
+    </div>
+    <div class="stack"><h3 class="h2">Что есть на кухне</h3>
+      ${toggle('equip', equipState().blender, 'Есть блендер', 'Если выключить, не предложим блюда, где нужен блендер', 'blender')}
+      ${toggle('equip', equipState().oven, 'Есть духовка', 'Если выключить, не предложим запеканки и другие блюда из духовки', 'oven')}
     </div>
     <div class="stack"><h3 class="h2">Здоровье</h3>
       ${toggle('health', state.health.diab, 'Сахар / диабет', 'Без сладкого и мёда, белая мука не чаще 2 раз в неделю, углеводы видны у каждого блюда', 'diab')}
@@ -2139,7 +2392,7 @@ function secAllergy(){
 }
 let estCache = {key:'', val:{}};
 function estimates(){
-  const key = JSON.stringify([state.people,state.family,state.macro,state.mf,state.cuisines,state.diet,state.meals,state.quick,state.learner,state.cook2,state.autoProt,state.health,state.dislikes,state.allergies,state.customEx,activeStores(),state.adj,pricesVer,state.start,state.ecoKeep]);
+  const key = JSON.stringify([state.people,state.family,state.macro,state.mf,state.cuisines,state.diet,state.meals,state.quick,state.learner,state.cook2,state.autoProt,state.health,state.dislikes,state.allergies,state.customEx,activeStores(),state.adj,pricesVer,state.start,state.ecoKeep,equipState(),state.chilled]);
   if (estCache.key !== key){ const val = {}; for (const m in MODES){ const r = generatePlan(m, 777, 0); val[m] = computeCart(r.plan, r.lo).total; } estCache = {key, val}; }
   return estCache.val;
 }
@@ -2154,7 +2407,7 @@ function storePicker(){
   const pairs = pairTotals(), cur = activeStores().slice().sort().join(',');
   return `<div class="chips">${list.map(([k,n])=>`<button type="button" class="chip" data-act="store2" data-v="${k}" ${pressed(state.stores2.includes(k))}>${IC.tick}${esc(n)}</button>`).join('')}</div>
     ${pairs.length > 1 ? `<div class="stack gap6"><span class="label m0">Сравнение пар магазинов</span><div class="pairs">${pairs.map((p, i) => `<button type="button" class="pair" data-act="pair" data-v="${p.stores.join(',')}" ${pressed(p.stores.slice().sort().join(',') === cur)}><span>${esc(p.stores.map(storeName).join(' + '))}${i === 0 ? ' <small>дешевле всего</small>' : ''}</span><b class="num">${fmt(p.total)}</b></button>`).join('')}</div></div>` : ''}
-    <p class="hint">Выберите два магазина или пару из списка. Во второй магазин переносим продукт, только если там дешевле хотя бы на ${SPLIT_MIN} сом или на ${Math.round(SPLIT_PCT*100)}%. Остальное — в первом.</p>`;
+    <p class="hint">Выберите два магазина или пару из списка. Во второй магазин переносим продукт, только если вся покупка там дешевле хотя бы на ${SPLIT_MIN} сом или на ${Math.round(SPLIT_PCT*100)}% (и не меньше чем на ${SPLIT_ABS} сом). Остальное — в первом.</p>`;
 }
 function startChips(){
   const t = parseIso(todayIso()), opts = [0,1,2,3,4,5,6].map(i => addDays(t, i));
@@ -2170,13 +2423,36 @@ function secBudget(){
     <div class="stack"><h3 class="h2">День покупки</h3>${startChips()}<p class="hint">Меню на 7 дней начнётся с этого дня.</p></div>
     <div class="stack"><div class="section-h"><h3 class="h2">Бюджет на неделю</h3><span class="hint">для ${eaters().length} чел.</span></div>
       <div class="stack gap8">${Object.entries(MODES).map(([k,m])=>`<button type="button" class="option option-row" data-act="mode" data-v="${k}" ${pressed(state.mode===k)}><span class="stack gap2 minw0"><b>${m.n}</b><small>${m.d}</small></span><span class="price">≈ ${fmt(est[k])} сом</span></button>`).join('')}</div>
-      ${state.mode === 'eco' ? `<div class="stack gap6"><span class="hint">В «Экономе» не берём дорогие продукты. Отметьте, что всё-таки любите и хотите оставить:</span><div class="chips">${Object.entries(PREMIUM).map(([k, p]) => `<button type="button" class="chip chip-sm" data-act="ecoKeep" data-v="${k}" ${pressed(state.ecoKeep.includes(k))}>${IC.tick}${p.n}</button>`).join('')}</div></div>` : ''}</div>
+</div>
     <div class="${SD ? '' : 'grid2'}">
       ${numField('cap','Жёсткий лимит (необязательно)','cap',state.cap,'сом',0,100000)}
       ${SD ? '' : `<label class="field" for="adj"><span class="label">Цены в вашем магазине</span>${pickField('adj', 'adj', state.adj, [-15,-10,-5,0,5,10,15].map(v => [v, v===0?'Как средние':(v>0?'+':'')+v+'%']))}</label>`}
     </div>
+    ${capFloor()}
+    ${ecoKeepBlock()}
+    ${chillPicker()}
     <p class="hint">Бюджет считается по целым упаковкам. ${priceSourceLine()}</p>
   </div>`;
+}
+// Под лимитом: минимум на неделю и честное предупреждение, если лимит ниже минимума.
+function capFloor(){
+  const n = eaters().length, min = minCostEst(), cap = capVal();
+  return `<div class="stack gap6"><div class="hint num">Минимум для ${n} ${plural(n,'человека','человек','человек')} на неделю ≈ <b>${fmt(min)}</b> сом</div>
+    ${cap > 0 && cap < min - .5 ? `<div class="warn num">С таким лимитом сбалансированное меню не собрать: не хватает ≈ <b>${fmt(min - cap)}</b> сом.</div>` : ''}</div>`;
+}
+// «Эконом»: что из дорогого оставить — под полем лимита и свёрнуто, чтобы поле не уезжало из-под пальца.
+function ecoKeepBlock(){
+  if (state.mode !== 'eco') return '';
+  const open = !!ui.ecoOpen, on = state.ecoKeep.map(k => PREMIUM[k] && PREMIUM[k].n).filter(Boolean);
+  return `<div class="stack gap6"><button type="button" class="more-btn" data-act="ecoOpen" aria-expanded="${open}"><span>Что оставить в «Экономе»: ${on.length ? esc(on.join(', ')) : 'ничего дорогого'}</span>${IC.chev}</button>
+    ${open ? `<span class="hint">В «Экономе» не берём дорогие продукты. Отметьте, что всё-таки любите и хотите оставить:</span><div class="chips">${Object.entries(PREMIUM).map(([k, p]) => `<button type="button" class="chip chip-sm" data-act="ecoKeep" data-v="${k}" ${pressed(state.ecoKeep.includes(k))}>${IC.tick}${p.n}</button>`).join('')}</div>` : ''}</div>`;
+}
+// Курица: замороженная (дешевле) или охлаждённая; в подсказке — разница цены, если она есть в данных.
+function chillPicker(){
+  if (!chickenIds().length) return '';
+  const df = chillDiff(), ds = df.map(x => Math.round(x.d)), lo = Math.min(...ds), hi = Math.max(...ds), sg = v => (v >= 0 ? '+' : '−') + fmt(Math.abs(v));
+  const hint = df.length ? `Охлаждённая в «${esc(storeName(activeStores()[0]))}»: ${lo === hi ? sg(lo) : sg(lo) + '…' + sg(hi)} сом/кг к цене замороженной.` : 'Охлаждённой курицы пока нет в каталоге — где её нет, посчитаем по замороженной.';
+  return `<div class="stack gap6"><span class="label m0">Курица</span>${seg('chilled', [['0','Замороженная (дешевле)'],['1','Охлаждённая']], chilledOn() ? '1' : '0')}<p class="hint">${hint}</p></div>`;
 }
 function secAccess(){
   return `<div class="stack">${toggle('big', big(), 'Крупный текст', 'Всё на экране станет крупнее, а белки, жиры и углеводы будут подписаны полностью')}</div>`;
@@ -2197,9 +2473,9 @@ const STEPS = [
 function viewOnboarding(){
   const i = state.step, s = STEPS[i], last = i === STEPS.length-1;
   return `<header class="top col">
-      <div class="row-between">
+      <div class="row-between ob-top">
         <div class="brand"><span class="logo">${IC.logo}</span><span class="eyebrow">Корзина недели · шаг ${i+1} из ${STEPS.length}</span></div>
-        <div class="row gap8"><button type="button" class="btn btn-ghost btn-sm aa" data-act="big" ${pressed(big())} aria-label="Крупный текст"><span class="aa-a" aria-hidden="true">Аа</span>${big() ? 'Обычный' : 'Крупнее'}</button>${i===0 ? `<button type="button" class="btn btn-ghost btn-sm" data-act="demo">Пример</button>` : ''}</div>
+        <div class="row gap8 ob-ctrl"><button type="button" class="btn btn-ghost btn-sm aa" data-act="big" ${pressed(big())} aria-label="Крупный текст"><span class="aa-a" aria-hidden="true">Аа</span>${big() ? 'Обычный' : 'Крупнее'}</button>${i===0 ? `<button type="button" class="btn btn-ghost btn-sm" data-act="demo">Пример</button>` : ''}</div>
       </div>
       <div class="progress" aria-hidden="true">${STEPS.map((_,k)=>`<i class="${k<=i?'on':''}"></i>`).join('')}</div>
     </header>
@@ -2219,7 +2495,9 @@ function dayTotals(d, sv, i = 0){
     else { t.k += x.r.kcal*w.m; t.p += x.r.P*w.m; t.f += x.r.F*w.m; t.c += x.r.C*w.m; } } }
   return t;
 }
-const diffPill = r => `<span class="pill d-${diffOf(r)}">${DIFF[diffOf(r)]}</span>`;
+// Чьи итоги дня показываем: индекс в state.people, только среди тех, кто ест (иначе первый человек).
+const viewPersonIdx = () => { const n = eaters().length, v = Math.round(+state.viewPerson || 0); return n > 1 && v > 0 && v < n ? v : 0; };
+const diffPill = r =>`<span class="pill d-${diffOf(r)}">${DIFF[diffOf(r)]}</span>`;
 const dayShort = d => DAYS_SHORT[dowOf(addDays(parseIso(state.start), d))];
 function dayChip(i, d, k){
   const dt = addDays(parseIso(state.start), i), today = isoOf(dt) === todayIso();
@@ -2242,17 +2520,22 @@ function protSwap(d){
 }
 function tipLabel(t){
   if (t.kind === 'snack') return `уберите перекус в ${dayShort(t.d)} <b class="num">−${fmt(t.save)} сом</b>`;
+  if (t.kind === 'split') return `покупайте в двух магазинах: ${esc(t.stores.map(storeName).join(' + '))} <b class="num">−${fmt(t.save)} сом</b>`;
   return `${dayShort(t.d)}: замените «${esc(RM[t.prev].n)}» на «${esc(RM[t.id].n)}» <b class="num">−${fmt(t.save)} сом</b>`;
 }
 // Живая подсказка про лимит: только если меню не укладывается, и без того, что уже включено.
 function capAdvice(cart){
   const cap = capVal(); if (!cap || cart.total <= cap) return '';
-  const tips = capTips(), gen = [];
-  if (SD && SD.keys.length > 1 && !state.split) gen.push(`<button type="button" class="link-btn herb" data-act="split" data-v="two">включить «Где дешевле»</button>`);
+  const R = budgetReport(), tips = R.tips, gen = [];
+  const tipAct = t => t.kind === 'snack' ? `data-act="noSnack" data-v="${t.d}"` : t.kind === 'split' ? `data-act="pair" data-v="${esc(t.stores.join(','))}"` : `data-act="pick" data-v="${t.d}:${t.s}:${t.id}"`;
+  if (SD && SD.keys.length > 1 && !state.split && !tips.some(t => t.kind === 'split')) gen.push(`<button type="button" class="link-btn herb" data-act="split" data-v="two">включить «Где дешевле»</button>`);
   if (state.mode !== 'eco') gen.push(`<button type="button" class="link-btn herb" data-act="tipEco">режим «Эконом»</button>`);
   gen.push(`<button type="button" class="link-btn herb" data-act="goSec" data-v="budget">поднять лимит</button>`);
   return `<div class="alert stack gap8"><b>Не укладываемся в лимит ${fmt(cap)} сом: не хватает ≈ ${fmt(cart.total - cap)} сом.</b>
-    ${tips.length ? `<span>Чтобы уложиться в лимит:</span><ul class="tips">${tips.map(t => `<li><span>${tipLabel(t)}</span><button type="button" class="btn btn-soft btn-sm" data-act="${t.kind === 'snack' ? 'noSnack' : 'pick'}" data-v="${t.kind === 'snack' ? t.d : `${t.d}:${t.s}:${t.id}`}">Применить</button></li>`).join('')}</ul>` : ''}
+    ${tips.length ? `<span>${R.stillShort > 0 ? 'Чтобы сэкономить:' : 'Чтобы уложиться в лимит:'}</span><ul class="tips">${tips.map(t => `<li><span>${tipLabel(t)}</span><button type="button" class="btn btn-soft btn-sm" ${tipAct(t)}>Применить</button></li>`).join('')}</ul>
+      ${tips.length > 1 ? `<span class="num">Всё вместе: ≈ −${fmt(R.tipsTotal)} сом.</span>` : ''}` : ''}
+    ${R.stillShort > 0 ? `<b class="num">${tips.length ? 'Даже после этого не хватит' : 'Подходящих замен нет, не хватает'} ≈ ${fmt(R.stillShort)} сом.</b>` : ''}
+    ${R.belowMin ? `<span class="num">Минимум для ${R.people} ${plural(R.people,'человека','человек','человек')} на неделю ≈ ${fmt(R.minCost)} сом — с лимитом ${fmt(cap)} сом сбалансированное меню не собрать.</span>` : ''}
     <div class="hint">Ещё можно: ${gen.join(', ')}.</div></div>`;
 }
 function viewMenu(){
@@ -2260,19 +2543,22 @@ function viewMenu(){
   if (ui.fill){ ui.fill = false; enforcePlan(); }
   const d = state.day, day = state.plan[d] || {}, p = state.people[0], tg = targets(p);
   const sv = servings(), cart = computeCart(), cap = capVal(), auto = autoProtOn();
-  const tot = dayTotals(d, sv);
-  const B = [['Ккал','',tot.k,tg.k,''],['Белки','белка',tot.p,tg.p,' г'],['Жиры','жиров',tot.f,tg.f,' г'],[big()?'Углеводы':'Углев.','углеводов',tot.c,tg.c,' г']];
+  // Итоги дня для выбранного члена семьи (state.viewPerson — индекс в state.people, по умолчанию первый).
+  const ppl = eaters(), vp = viewPersonIdx(), tgv = vp ? targets(state.people[vp]) : tg;
+  const tot = dayTotals(d, sv, vp), tot0 = vp ? dayTotals(d, sv, 0) : tot;
+  const B = [['Ккал','',tot.k,tgv.k,''],['Белки','белка',tot.p,tgv.p,' г'],['Жиры','жиров',tot.f,tgv.f,' г'],[big()?'Углеводы':'Углев.','углеводов',tot.c,tgv.c,' г']];
   const off = (v, t) => t > 0 && Math.abs(v/t - 1) > .1;
   const bar = ([lbl, , v, target, unit]) => `<div class="bar-item ${off(v, target) ? 'off' : ''}"><div class="lbl"><span>${lbl}</span></div><div class="val num">${fmt(v)}<span class="hint"> / ${fmt(target)}${unit}</span></div><div class="bar"><i style="width:${clamp(v/target*100,0,100)}%"></i></div></div>`;
   const offs = B.filter(b => off(b[2], b[3])).map(([, gen, v, t, u]) => `${gen ? gen + ' ' : ''}${v > t ? 'больше' : 'меньше'} нормы на ${fmt(Math.abs(v - t))}${u || ' ккал'}`);
   const slots = SLOT_ORDER.filter(s => s in day);
-  const name = p.name ? esc(p.name) : 'вас';
+  const forWho = vp === 0 && !p.name ? 'ваши порции' : 'порции: ' + esc(personLabel(vp));
   const dt = addDays(parseIso(state.start), d);
   const ended = Math.round((parseIso(todayIso()) - parseIso(state.start))/864e5) > 6;
   const adds = (auto ? sv : servings(state.plan, state.lo, true)).filter(a => a.d === d && a.add && !a.bread);
-  const ps = adds.length || tot.p < tg.p*.9 ? protSwap(d) : null;
+  const ps = adds.length || tot0.p < tg.p*.9 ? protSwap(d) : null;
   const prep = d < 6 ? Object.entries(state.plan[d+1]||{}).filter(([s,id]) => RM[id] && RM[id].prep && !(s === 'l' && state.lo[d+1])).map(([s,id]) => ({s, r:RM[id]})) : [];
-  const dk = [0,1,2,3,4,5,6].map(i => dayTotals(i, sv).k);
+  const dk = [0,1,2,3,4,5,6].map(i => dayTotals(i, sv, vp).k);
+  const sw = ppl.length > 1 ? `<div class="chips person-sw" role="group" aria-label="Чьи калории за день показать">${ppl.map((q, i) => `<button type="button" class="chip chip-sm" data-act="viewPerson" data-v="${i}" ${pressed(i === vp)}>${IC.tick}${esc(personLabel(i))}</button>`).join('')}</div>` : '';
   return `<header class="top"><div class="brand"><span class="logo">${IC.logo}</span><div><div class="eyebrow">${GOALS[p.goal].n} · ${weekRange()}</div><h1 class="title">Меню недели</h1></div></div>
       <button type="button" class="icon-btn" data-act="ask" data-v="regen" aria-label="Пересобрать всю неделю">${IC.refresh}</button></header>
     <div class="stack">
@@ -2288,7 +2574,8 @@ function viewMenu(){
       ${capAdvice(cart)}
       <div class="days-wrap"><div class="days" role="group" aria-label="День недели, калории за день">${dk.map((k, i) => dayChip(i, d, k)).join('')}</div></div>
       <section class="card stack gap10">
-        <div class="section-h m0"><h2 class="h2">${DAYS[dowOf(dt)]}, ${dayMonth(dt)}</h2><span class="hint">порции для ${name}</span></div>
+        <div class="section-h m0"><h2 class="h2">${DAYS[dowOf(dt)]}, ${dayMonth(dt)}</h2><span class="hint">${forWho}</span></div>
+        ${sw}
         <div class="bars">${B.map(bar).join('')}</div>
         ${offs.length ? `<div class="bar-note num">${esc(offs.join(' · '))}</div>` : ''}
         ${adds.length || ps ? `<div class="addon"><b>Добрать белок:</b>
@@ -2297,7 +2584,7 @@ function viewMenu(){
           ${auto ? `<div class="hint">Уже в меню и корзине, порции блюд чуть уменьшили, чтобы калории остались в норме.</div>` : `<button type="button" class="btn btn-soft btn-sm mt6" data-act="autoProt">Добавлять автоматически</button>`}` : ''}</div>` : ''}
         ${prep.length ? prep.map(x => `<div class="prep"><b>Вечером:</b> ${esc(x.r.prep)}. <span class="hint">Завтра на ${SLOT_NAME[x.s].toLowerCase()}: ${esc(x.r.n)}</span></div>`).join('') : ''}
       </section>
-      ${slots.map(s => mealCard(d, s, day[s], sv)).join('')}
+      ${slots.map(s => mealCard(d, s, day[s], sv, vp)).join('')}
       <p class="hint ta-c pv6">Нажмите «Заменить», если что-то не нравится. Корзина пересчитается сама.</p>
     </div>`;
 }
@@ -2313,22 +2600,22 @@ function breadLine(list, r){
   if (list.length === 1 && !state.family) return `${esc(list[0].add.t)} ${to}`;
   return to + ': ' + list.map(b => `${esc(personLabel(b.who[0].i))} ${esc(b.add.t)}`).join(' · ');
 }
-function mealCard(d, s, id, sv){
+function mealCard(d, s, id, sv, vp = 0){
   const r = RM[id];
   if (skipSlot(d, s)) return `<article class="meal empty-meal"><span class="slot">${SLOT_NAME[s]}</span><p class="hint">Перекус убран, чтобы уложиться в бюджет. Калории распределили по другим приёмам пищи.</p><div><button type="button" class="btn btn-ghost btn-sm" data-act="snackBack" data-v="${d}">Вернуть перекус</button></div></article>`;
   if (!r) return `<article class="meal empty-meal"><span class="slot">${SLOT_NAME[s]}</span><p class="hint">Нет подходящих блюд под ваши ограничения. Ослабьте фильтры в профиле.</p></article>`;
   const isLo = s === 'l' && state.lo[d], two = s === 'd' ? twoDay(d, sv) : null, prevTwo = isLo && d > 0 ? twoDay(d-1, sv) : null;
   const main = sv.find(x => x.d === d && x.s === s && !x.alt && !x.add), alts = sv.filter(x => x.d === d && x.s === s && x.alt);
   const breads = sv.filter(x => x.d === d && x.s === s && x.bread);
-  const me = main && main.who.find(w => w.i === 0), m = me ? me.m : portion(r, s, personKcal(state.people[0]));
+  const me = main && (main.who.find(w => w.i === vp) || main.who.find(w => w.i === 0)), m = me ? me.m : portion(r, s, personKcal(state.people[0]));
   const hm = main ? main.who.reduce((a,w) => a + w.m, 0) : 0, L = ML(), u = L.u, diab = !!state.health.diab;
   const carbs = diab ? `<span class="carb-hl">Углеводы <b>${fmt(r.C*m)}</b> г</span>` : `<span>${L.c} <b>${fmt(r.C*m)}</b>${u}</span>`;
   return `<article class="meal ${isLo?'lo':''}">
     <div class="meal-top"><span class="slot">${SLOT_NAME[s]}</span><span class="tags">${isLo ? '<span class="tag">разогреть</span>' : `<span class="tag">${r.time} мин</span>${diffPill(r)}`}</span></div>
     <h3>${isLo ? 'Остатки: ' : ''}${esc(r.n)}</h3>
-    ${isLo ? `<p class="hint">Готовить не нужно: ${prevTwo ? `${fmtD(prevTwo.tom)} порции из вчерашнего ужина` : 'это вчерашний ужин, приготовленный с запасом'}, просто разогрейте.</p>` : ''}
+    ${isLo ? `<p class="hint">Готовить не нужно: ${prevTwo ? `${portionsText(prevTwo.tom)} из вчерашнего ужина` : 'это вчерашний ужин, приготовленный с запасом'}, просто разогрейте.</p>` : ''}
     ${two ? `<p class="pill-row"><span class="pill d-easy">Готовим на 2 дня</span> <span class="hint num">${twoDayText(two)}</span></p>` : ''}
-    <div class="facts num"><span><b>${fmt(r.kcal*m)}</b> ккал</span><span>${L.p} <b>${fmt(r.P*m)}</b>${u}</span><span>${L.f} <b>${fmt(r.F*m)}</b>${u}</span>${carbs}${eaters().length>1 && hm ? `<span>${fmt1(hm)} ${portionsWord(hm)} на всех</span>` : ''}${isLo ? '' : `<span>≈ <b>${fmt(servingCost(r)*(two ? two.total : hm||m))}</b> сом</span>`}</div>
+    <div class="facts num"><span><b>${fmt(r.kcal*m)}</b> ккал</span><span>${L.p} <b>${fmt(r.P*m)}</b>${u}</span><span>${L.f} <b>${fmt(r.F*m)}</b>${u}</span>${carbs}${eaters().length>1 && hm ? `<span>${portionsText(hm)} на всех</span>` : ''}${isLo ? '' : `<span>≈ <b>${fmt(servingCost(r)*(two ? two.total : hm||m))}</b> сом${two ? ' на 2 дня' : ''}</span>`}</div>
     ${main ? `<div class="plate num">${plateLine(main)}</div>` : ''}
     ${breads.length ? `<div class="plate num bread-line">${breadLine(breads, r)}</div>` : ''}
     ${alts.map(a => `<div class="alt-line"><span><b>${esc(personLabel(a.who[0].i))}</b> ест: ${esc(a.r.n)} <span class="hint">(≈ ${fmt(plateG(a.r, a.who[0].m))} ${isSoup(a.r) ? 'мл' : 'г'}, не ест то, что в основном блюде)</span></span><button type="button" class="link-btn herb" data-act="openAlt" data-v="${d}:${s}:${a.who[0].i}">Рецепт</button></div>`).join('')}
@@ -2393,7 +2680,7 @@ function viewCart(){
     </div>`;
 }
 function itemRow(x){
-  const editing = ui.editing === x.o.key, open = !!ui.open[x.id], left = leftText(x), it = x.o.item, url = it && safeUrl(it.url);
+  const editing = ui.editing === x.o.key, open = !!ui.open[x.id], left = leftText(x), reuse = x.home ? '' : reuseText(x), it = x.o.item, url = it && safeUrl(it.url);
   const n = x.dishes.length;
   const homeLbl = x.home ? (x.pantry ? 'купить' : '✓ есть дома') : 'есть дома';
   return `<div class="item ${x.bought?'bought':''} ${x.home?'home':''}">
@@ -2402,8 +2689,10 @@ function itemRow(x){
       <div class="item-name">${esc(x.i.n)}</div>
       ${it ? `<div class="item-store">${esc(it.name)}${url ? ` <a class="ext-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer" aria-label="Открыть товар на сайте магазина">${IC.ext}</a>` : ''}</div>` : ''}
       <div class="item-qty num">${qtyText(x)}${needText(x)?' · '+needText(x):''}</div>
-      <div class="item-qty num">${unitPriceText(x)}${left ? ` · <span class="left">останется ≈ ${left}</span>` : ''}</div>
+      <div class="item-qty num">${unitPriceText(x)}${!reuse && left ? ` · <span class="left">останется ≈ ${left}</span>` : ''}</div>
+      ${reuse ? `<div class="item-qty num"><span class="left">${esc(reuse)}</span>${left ? ` · после недели ≈ ${left}` : ''}</div>` : ''}
       ${x.o.avg ? '<div class="item-note">нет в каталоге, средняя цена</div>' : it && it.approx ? '<div class="item-note">цена примерная</div>' : ''}
+      ${x.o.noChill ? '<div class="item-note">охлаждённой нет — замороженная</div>' : x.o.chilled ? '<div class="item-qty">охлаждённая</div>' : ''}
       ${n ? `<button type="button" class="for-btn" data-act="more" data-v="${x.id}" aria-expanded="${open}">${open ? 'для: ' + esc(x.dishes.join(', ')) : `для ${n} ${plural(n,'блюда','блюд','блюд')}`} ${IC.chev}</button>` : ''}
     </div>
     <div class="item-right"><button type="button" class="price-btn ${x.o.custom?'custom':''}" data-act="editprice" data-v="${esc(x.o.key)}" aria-label="Изменить цену: ${fmt(x.cost)} сом">${fmt(x.cost)}</button>
@@ -2455,6 +2744,14 @@ function viewProfile(){
     </div>
     ${state.dirty ? `<div class="ob-foot above-tabs"><div class="inner"><button type="button" class="btn btn-ghost" data-act="ask" data-v="regen">Пересобрать неделю</button><button type="button" class="btn btn-primary" data-act="update">Обновить меню</button></div></div>` : ''}`;
 }
+// Совет для большой партии (от 6 порций): текст из рецепта (r.batch), иначе общий — для блюд, которые обжаривают.
+const SHEET_BATCH_MIN = 6, SHEET_BATCH_FRY = 'Больше 6 порций — используйте казан или большую кастрюлю и обжаривайте в 2 захода';
+const fryingDish = r => hasF(r, 'fried') || (Array.isArray(r.steps) && r.steps.some(t => /обжар|поджар|жарьте|жарим|жарить/i.test(String(t))));
+function sheetBatchTip(r, hm){
+  if (!r || !(r1(hm) >= SHEET_BATCH_MIN)) return '';
+  if (typeof r.batch === 'string' && r.batch.trim()) return r.batch.trim();
+  return fryingDish(r) ? SHEET_BATCH_FRY : '';
+}
 function sheetWrap(label, inner){ return `<div class="sheet-wrap" data-act="closeSheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(label)}" data-stop><div class="grab"></div>${inner}</div></div>`; }
 function viewSheet(){
   if (!ui.sheet) return '';
@@ -2467,29 +2764,39 @@ function viewSheet(){
   const me = x && x.who.find(w => w.i === 0), m = me ? me.m : (x ? x.who[0].m : 1), L = ML(), dt = addDays(parseIso(state.start), d);
   const many = eaters().length > 1 || !!two;
   const breads = alt == null ? sv.filter(y => y.d === d && y.s === s && y.bread) : sv.filter(y => y.d === d && y.s === s && y.bread && y.who[0].i === alt);
-  const bg = breads.reduce((a, b) => a + b.add.g, 0);
+  const bg = breads.reduce((a, b) => a + b.add.g, 0), tip = isLo ? '' : sheetBatchTip(r, hm);
   return sheetWrap(r.n, `
     <div class="row-between start"><div class="stack gap4"><span class="slot">${SLOT_NAME[s]} · ${DAYS[dowOf(dt)]}${alt != null ? ' · для: ' + esc(personLabel(alt)) : ''}</span><h2 class="title t21">${isLo ? 'Остатки: ' : ''}${esc(r.n)}</h2></div>
       <button type="button" class="icon-btn" data-act="closeSheet" aria-label="Закрыть">${IC.close}</button></div>
     <div class="facts num hint sheet-facts"><span>${r.time} мин</span>${diffPill(r)}<span>${fmt(r.kcal*m)} ккал на ${me ? 'вашу ' : ''}порцию</span><span>${L.p} ${fmt(r.P*m)}${L.u} · ${L.f} ${fmt(r.F*m)}${L.u} · ${state.health.diab ? 'Углеводы' : L.c} ${fmt(r.C*m)}${state.health.diab ? ' г' : L.u}</span></div>
     ${x ? `<div class="plate num">${plateLine(x)}</div>` : ''}
     ${breads.length ? `<div class="plate num bread-line">${breadLine(breads, r)}</div>` : ''}
-    ${isLo ? `<div class="note mt10">Это вчерашний ужин, приготовленный с запасом${prevTwo ? `: ${fmtD(prevTwo.tom)} порции` : ''}. Просто разогрейте.</div>` : ''}
+    ${isLo ? `<div class="note mt10">Это вчерашний ужин, приготовленный с запасом${prevTwo ? `: ${portionsText(prevTwo.tom)}` : ''}. Просто разогрейте.</div>` : ''}
     ${two ? `<div class="note mt10 num"><span class="pill d-easy">Готовим на 2 дня</span> <b>${twoDayText(two)}</b>. Продукты ниже уже с запасом на завтрашний обед.</div>` : ''}
+    ${tip ? `<div class="batch-tip mt10"><b>Совет:</b> ${esc(tip)}</div>` : ''}
     ${r.prep ? `<div class="prep mt10"><b>С вечера:</b> ${esc(r.prep)}</div>` : ''}
     ${keepsOf(r) >= 1 ? `<p class="hint mt10">Хранится в холодильнике до ${keepsOf(r)} ${plural(keepsOf(r),'дня','дней','дней')}.</p>` : ''}
-    <div class="section-h mt16"><h3 class="h2">Продукты</h3><span class="hint num">${many ? `на всех, ${fmtD(hm)} порции` : 'ваша порция'}</span></div>
+    <div class="section-h mt16"><h3 class="h2">Продукты</h3><span class="hint num">${many ? `на всех, ${portionsText(hm)}` : 'ваша порция'}</span></div>
     <div class="ing-list">${Object.entries(r.ing).filter(([id])=>ING[id]).map(([id,g])=>`<div><span>${esc(ING[id].n)}</span><span>${amountText(id, g*hm)}</span></div>`).join('')}${bg && ING[breads[0].add.id] ? `<div><span>${esc(ING[breads[0].add.id].n)} (${isSoup(r) ? 'к супу' : 'к блюду'})</span><span>${amountText(breads[0].add.id, bg)}</span></div>` : ''}</div>
-    <div class="section-h mt20"><h3 class="h2">Как готовить</h3>${many ? `<span class="hint num">на ${fmtD(hm)} порции</span>` : ''}</div>
+    <div class="section-h mt20"><h3 class="h2">Как готовить</h3>${many ? `<span class="hint num">на ${portionsText(hm, true)}</span>` : ''}</div>
     <ol class="steps">${(Array.isArray(r.steps) ? r.steps : []).map(t=>`<li><span>${stepText(t, hm)}</span></li>`).join('')}</ol>
     ${alt == null ? `<div class="mt20"><button type="button" class="btn btn-ghost btn-block" data-act="swap" data-v="${d}:${s}">${IC.swap}Заменить на другое блюдо</button></div>` : ''}`);
 }
 function viewReplace(){
   if (!ui.replace) return '';
   const G = genSetup(state.mode), {d, s} = ui.replace, cur = RM[state.plan[d][s]], opts = replaceOptions(d, s, G), k0 = personKcal(state.people[0]), L = ML();
-  const cm = cur ? portion(cur, s, k0) : 0, cP = cur ? cur.P*cm : 0, cC = cur ? cur.C*cm : 0, cCost = cur ? slotCost(cur, s, G) : 0, diab = !!state.health.diab;
-  const diffs = (r, m) => {
-    const out = [], dP = r.P*m - cP, dC = r.C*m - cC, dS = slotCost(r, s, G) - cCost;
+  // Цены на одной основе: ужин «на 2 дня» (завтра обед из остатков) — за оба дня, остальное — за один приём.
+  // Основа для каждого блюда — slotCostBasis из корзины (если есть): блюдо, которое не хранится, считается на 1 день.
+  const two = s === 'd' && d < 6 && !!state.lo[d+1], many = eaters().length > 1;
+  const basisOf = r => typeof slotCostBasis === 'function' ? slotCostBasis(d, s, r, G) :
+    two && keepsOf(r) >= 2 ? {cost:slotCost(r, 'd', G) + slotCost(r, 'l', G), days:2} : {cost:slotCost(r, s, G), days:1};
+  const cb = cur ? basisOf(cur) : {cost:0, days:1}, cur1 = cur ? slotCost(cur, s, G) : 0;
+  const perOf = b => b.days >= 2 ? ' на 2 дня' : two ? ' за 1 день' : many ? ' на всех' : '';
+  const basisNote = two ? `Ужин готовим на 2 дня: завтра обед из остатков, поэтому цены — за оба дня${many ? ' на всех' : ''}.` : `Цены — за один ${s === 'd' ? 'ужин' : 'приём пищи'}${many ? ' на всех' : ''}.`;
+  const cm = cur ? portion(cur, s, k0) : 0, cP = cur ? cur.P*cm : 0, cC = cur ? cur.C*cm : 0, diab = !!state.health.diab;
+  const diffs = (r, m, b) => {
+    // Сравниваем на одной основе: 2 дня с 2 днями, 1 день — с одним днём текущего блюда.
+    const out = [], dP = r.P*m - cP, dC = r.C*m - cC, dS = b.cost - (b.days === cb.days ? cb.cost : cur1);
     if (!cur) return '';
     if (Math.abs(dP) >= 3) out.push(`белка ${dP > 0 ? '+' : '−'}${fmt(Math.abs(dP))} г`);
     if (diab && Math.abs(dC) >= 5) out.push(`углеводов ${dC > 0 ? '+' : '−'}${fmt(Math.abs(dC))} г`);
@@ -2499,11 +2806,13 @@ function viewReplace(){
   return sheetWrap('Заменить блюдо', `
     <div class="row-between start"><div class="stack gap4"><span class="slot">${SLOT_NAME[s]} · заменить</span><h2 class="title t21">${cur ? esc(cur.n) : 'Выберите блюдо'}</h2></div>
       <button type="button" class="icon-btn" data-act="closeSheet" aria-label="Закрыть">${IC.close}</button></div>
-    <p class="hint mt6">Выберите, на что заменить. Разница — по сравнению с текущим блюдом. Корзина пересчитается сама.</p>
-    <div class="opt-list">${opts.length ? opts.map(r => { const m = portion(r, s, k0); return `<button type="button" class="opt" data-act="pick" data-v="${d}:${s}:${r.id}">
+    ${cur && !cb.leftover ? `<div class="cost-basis num mt6">${cb.days >= 2 ? '<span class="pill d-easy">На 2 дня</span>' : ''}<span>Сейчас ≈ <b>${fmt(cb.cost)} сом</b>${perOf(cb)}</span></div>` : ''}
+    <p class="hint mt6">${basisNote} Разница — по сравнению с текущим блюдом. Корзина пересчитается сама.</p>
+    <div class="opt-list">${opts.length ? opts.map(r => { const m = portion(r, s, k0), b = basisOf(r); return `<button type="button" class="opt" data-act="pick" data-v="${d}:${s}:${r.id}">
       <b>${esc(r.n)}</b>
-      ${diffs(r, m)}
-      <span class="facts num"><span><b>${fmt(r.kcal*m)}</b> ккал</span><span>${L.p} <b>${fmt(r.P*m)}</b>${big()?' г':''}</span>${diab ? `<span>Углеводы <b>${fmt(r.C*m)}</b> г</span>` : ''}<span>≈ <b>${fmt(slotCost(r, s, G))}</b> сом${eaters().length>1?' на всех':''}</span><span>${r.time} мин</span>${diffPill(r)}</span></button>`; }).join('') : '<p class="note">Других подходящих блюд нет. Ослабьте ограничения в профиле.</p>'}</div>`);
+      ${diffs(r, m, b)}
+      <span class="facts num"><span><b>${fmt(r.kcal*m)}</b> ккал</span><span>${L.p} <b>${fmt(r.P*m)}</b>${big()?' г':''}</span>${diab ? `<span>Углеводы <b>${fmt(r.C*m)}</b> г</span>` : ''}<span>≈ <b>${fmt(b.cost)}</b> сом${perOf(b)}</span><span>${r.time} мин</span>${diffPill(r)}</span>
+      ${b.note ? `<span class="hint">${esc(b.note)}</span>` : ''}</button>`; }).join('') : '<p class="note">Других подходящих блюд нет. Ослабьте ограничения в профиле.</p>'}</div>`);
 }
 const CONFIRMS = {
   regen:{t:'Пересобрать неделю?', d:'Подберём все блюда заново. Ваши ручные замены пропадут. Отметки в корзине останутся у продуктов, которые снова понадобятся. Профиль и записи веса не удаляются.', ok:'Пересобрать',
@@ -2594,6 +2903,8 @@ const ACT = {
   quick:v => { state.quick = v; changed('filter'); render(); },
   learner:() => { state.learner = !state.learner; changed('filter'); render(); },
   cook2:() => { state.cook2 = !state.cook2; state.noLo = {}; changed('score'); render(); },
+  equip:v => { if (v !== 'blender' && v !== 'oven') return; const e = equipState(); e[v] = !e[v]; state.equip = e; changed('filter'); render(); },
+  viewPerson:v => { state.viewPerson = Math.max(0, Math.round(+v) || 0); save(); render(); },
   health:v => { state.health[v] = !state.health[v]; if (v === 'diab' && state.health.diab) state.diabNo = false; safety(); render(); },
   lowcarb:() => { state.macro = 'lowcarb'; state.macroTouched = true; state.diabNo = true; changed(); render(); toast('БЖУ: меньше углеводов. Нажмите «Обновить меню»'); },
   diabNo:() => { state.diabNo = true; save(); render(); },
@@ -2668,17 +2979,31 @@ document.addEventListener('click', e => {
   if ((a === 'closeSheet' || a === 'cancel') && e.target.closest('[data-stop]') && !e.target.closest('button[data-act]')) return;
   const fn = ACT[a]; if (!fn) return;
   e.preventDefault();
+  // На телефоне нажатие кнопки не всегда снимает фокус с поля, и change не приходит до перерисовки:
+  // сохраняем набранное значение сами, иначе оно пропадёт вместе со старой разметкой.
+  const af = document.activeElement;
+  if (af && af !== el && af.dataset && af.dataset.bind && af.tagName === 'INPUT') commitBind(af);
   fn(el.dataset.v, el);
 });
 const BIND_KIND = {name:null, target:null, age:'score', height:'score', weight:'score', act:'score', goal:'score', cact:'score'};
-document.addEventListener('change', e => {
-  const el = e.target; const b = el.dataset && el.dataset.bind; if (!b) return;
-  const parts = b.split('.'); let val = el.value;
-  const numeric = el.type === 'number' || el.tagName === 'SELECT' && /(^|\.)(act|adj)$/.test(b);
-  if (numeric) val = val === '' ? '' : parseFloat(val);
-  if (parts[0] === 'p'){ const p = state.people[+parts[1]]; if (!p) return; p[parts[2]] = val; const k = BIND_KIND[parts[2]]; if (k) changed(k); else { estCache.key = ''; save(); } }
-  else { state[b] = val; if (b === 'adj'){ estCache.key = ''; save(); } else if (b === 'customEx') safety(); else changed(); }
-  softRender();
+const bindValue = el => { const b = el.dataset.bind, numeric = el.type === 'number' || el.tagName === 'SELECT' && /(^|\.)(act|adj)$/.test(b); return numeric ? (el.value === '' ? '' : parseFloat(el.value)) : el.value; };
+// Записать значение поля в состояние. Возвращает false, если записывать некуда или значение не изменилось.
+function commitBind(el){
+  const b = el.dataset && el.dataset.bind; if (!b) return false;
+  const parts = b.split('.'), val = bindValue(el);
+  if (parts[0] === 'p'){ const p = state.people[+parts[1]]; if (!p) return false; const same = p[parts[2]] === val && el.dataset.saved === String(val); p[parts[2]] = val; el.dataset.saved = String(val); if (same) return false; const k = BIND_KIND[parts[2]]; if (k) changed(k); else { estCache.key = ''; save(); } }
+  else { const same = state[b] === val && el.dataset.saved === String(val); state[b] = val; el.dataset.saved = String(val); if (same) return false; if (b === 'adj'){ estCache.key = ''; save(); } else if (b === 'customEx') safety(); else changed(); }
+  return true;
+}
+document.addEventListener('change', e => { if (commitBind(e.target)) softRender(); });
+// Пока печатают в поле человека или лимита — сразу пишем в состояние (без перерисовки) и обновляем калории на экране.
+document.addEventListener('input', e => {
+  const el = e.target, b = el.dataset && el.dataset.bind; if (!b || el.tagName !== 'INPUT') return;
+  const parts = b.split('.'), val = bindValue(el);
+  if (parts[0] === 'p'){ const p = state.people[+parts[1]]; if (!p) return; p[parts[2]] = val; if (typeof liveKcal === 'function') liveKcal(); }
+  else if (b === 'cap') state.cap = val;
+  else return;
+  save();
 });
 let pendingRender = false;
 const inField = () => { const a = document.activeElement; return a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && a.type !== 'range'; };

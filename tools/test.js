@@ -13,7 +13,7 @@ const code=[rd('src/data.js'),rd(pricesFile),require('./sources').appSource()].j
 `\n;globalThis.T={get state(){return state},set state(v){state=v},get SD(){return SD},get RAWP(){return typeof STORE_ITEMS!=='undefined'?{date:PRICES_DATE,stores:STORE_INFO,items:STORE_ITEMS}:null},defaults,migrate,generatePlan,computeCart,servings,addonsFrom,pool,poolFor,RM,ING,RECIPES,
 viewMenu,viewCart,viewProfile,viewProgress,viewOnboarding,viewSheet,viewReplace,viewConfirm,STEPS,SECS,ui,ACT,regenerate,swapMeal,enforcePlan,smartUpdate,replaceOptions,pickReplace,
 personKcal,targets,filterCtx,resetCaches,applyLivePrices,isWk,keepsOf,hasF,honeyCentred,diffOf,QUICK_LIM,shareText,qtyText,render,genSetup,activeStores,buyIn,
-isSoup,isAdult,plateG,yieldOf,dayTotals,forecast,menuKcal,maintKcal,storeItem,pairTotals,needText,unitPriceText,stepText,twoDay,twoDayText,fmtD,heavyDinner,kaymakStyle,baseOf,fruitIds,premOf,capTips,childKcal,summerIds,dropUnknown};`;
+isSoup,isAdult,plateG,yieldOf,dayTotals,forecast,menuKcal,maintKcal,storeItem,pairTotals,needText,unitPriceText,stepText,twoDay,twoDayText,fmtD,portionsText,heavyDinner,kaymakStyle,baseOf,fruitIds,premOf,capTips,childKcal,summerIds,dropUnknown};`;
 vm.runInContext(code,ctx);
 const T=ctx.T;
 let fails=0,checks=0;
@@ -170,10 +170,10 @@ if(T.SD){
   T.state.split=true;T.state.stores2=[k[0],k[1]];T.resetCaches();c=T.computeCart();
   ok(c.stores.length===2,'режим «Где дешевле» не включился');
   const sub=Object.values(c.sub).reduce((a,b)=>a+b,0);ok(Math.abs(sub-c.pay)<1,'сумма по магазинам не равна итогу');
-  // во второй магазин — только при экономии >= 30 сом или 10%, в первом не осталось того, что заметно дешевле во втором
+  // во второй магазин — только при экономии всей покупки >= 30 сом или 10% и не меньше 15 сом; в первом не осталось того, что заметно дешевле во втором
   const [m1,m2]=c.stores,has=(k,id)=>!!(T.SD.items[k]&&T.SD.items[k][id]&&+T.SD.items[k][id].price>0);
-  const badMove=c.items.filter(x=>x.store===m2&&has(m1,x.id)&&(()=>{const a=T.buyIn(m1,x.id,x.need).cost,sv=a-x.cost;return !(sv>=30||sv>=a*.1);})());
-  const missed=c.items.filter(x=>x.store===m1&&has(m2,x.id)&&(()=>{const b=T.buyIn(m2,x.id,x.need).cost,sv=x.cost-b;return sv>=30||(sv>0&&sv>=x.cost*.1);})());
+  const badMove=c.items.filter(x=>x.store===m2&&has(m1,x.id)&&(()=>{const a=T.buyIn(m1,x.id,x.need).cost,sv=a-x.cost;return !(sv>=15&&(sv>=30||sv>=a*.1));})());
+  const missed=c.items.filter(x=>x.store===m1&&has(m2,x.id)&&(()=>{const b=T.buyIn(m2,x.id,x.need).cost,sv=x.cost-b;return sv>=15&&(sv>=30||sv>=x.cost*.1);})());
   ok(badMove.length===0,'перенесено во 2-й магазин без выгоды: '+badMove.map(x=>x.id).join(','));
   ok(missed.length===0,'не перенесено, хотя выгодно: '+missed.map(x=>x.id).join(','));
   ok(T.viewCart().includes('store-sec'),'корзина не разделена по магазинам');
@@ -279,10 +279,10 @@ console.log('\n== 4. Шаги рецепта и «на 2 дня» ==');
  fresh(s=>{s.cook2=true;famKid(s)});T.regenerate(true);
  const lo=T.state.lo,dd=lo.indexOf(true)-1;ok(dd>=0,'нет ужина на 2 дня');
  if(dd>=0){const sv=T.servings(),t=T.twoDay(dd,sv),txt=T.twoDayText(t);T.state.day=dd;const h=T.viewMenu();
-  ok(/^Готовим \d+,\d порции: \d+,\d сегодня \+ \d+,\d завтра$/.test(txt),'формат «Готовим N порции: a сегодня + b завтра»: '+txt);
+  ok(/^Готовим \d+(,\d)? порци[яюий]: \d+(,\d)? сегодня \+ \d+(,\d)? завтра$/.test(txt),'формат «Готовим N порции: a сегодня + b завтра»: '+txt);
   ok(Math.abs(t.today+t.tom-t.total)<1e-9,'сегодня + завтра ≠ всего');ok(h.includes(txt),'в карточке ужина нет '+txt);
   T.ui.sheet={d:dd,s:'d'};const sh=T.viewSheet();T.ui.sheet=null;ok(sh.includes(txt),'в рецепте нет тех же чисел');
-  T.state.day=dd+1;ok(T.viewMenu().includes(T.fmtD(t.tom)+' порции из вчерашнего ужина'),'в «Остатках» нет тех же порций');
+  T.state.day=dd+1;ok(T.viewMenu().includes(T.portionsText(t.tom)+' из вчерашнего ужина'),'в «Остатках» нет тех же порций');
   console.log('  ',txt);}}
 
 console.log('\n== 5. Здоровье: ужин, недельные лимиты, жиры ==');
@@ -320,16 +320,18 @@ console.log('\n== 6. Разнообразие ==');
  console.log('  меню проверено',n);}
 
 console.log('\n== 7. Студент: есть дома, эконом, подсказки к лимиту ==');
-{fresh();T.regenerate(true);let c=T.computeCart();const oil=c.items.find(x=>x.id==='oil');
+{// сценарий, где в корзине точно есть продукты «обычно есть дома» (иначе пометки в корзине нет и проверять нечего)
+ let c;for(let seed=0;seed<12;seed++){fresh(s=>{s.seed=seed*977+11});T.state.seed=seed*977+11;T.regenerate(false);c=T.computeCart();if(c.items.some(x=>x.pantry))break;}
+ const oil=c.items.find(x=>x.id==='oil');
  const pant=c.items.filter(x=>x.pantry);ok(pant.length>0,'ничего не отмечено «есть дома» по умолчанию');
  ok(pant.every(x=>x.home)&&Math.abs(c.total-c.items.filter(x=>!x.home).reduce((a,x)=>a+x.cost,0))<.01,'«есть дома» входит в сумму');
  if(oil){ok(oil.home,'масло не отмечено «есть дома»');T.ACT.home('oil');c=T.computeCart();ok(!c.items.find(x=>x.id==='oil').home,'«купить» не вернул масло в сумму');T.ACT.home('oil');ok(T.computeCart().items.find(x=>x.id==='oil').home,'повторное нажатие не вернуло «есть дома»');}
- ok(/Обычно есть дома: .+ — не учтены/.test(T.viewCart()),'нет пометки «Обычно есть дома: … — не учтены»');
+ if(T.computeCart().items.some(x=>x.pantry))ok(/Обычно есть дома: .+ — не учтены/.test(T.viewCart()),'нет пометки «Обычно есть дома: … — не учтены»');
  console.log('  по умолчанию дома:',pant.map(x=>x.id).join(', '));
  let prem=0;for(let seed=0;seed<5;seed++){fresh(s=>{s.mode='eco';s.seed=seed*5+2});T.state.seed=seed*5+2;T.regenerate(false);prem+=anyR(T.state.plan,T.state.lo,r=>T.premOf(r).length>0).length;}
  ok(prem===0,'«Эконом»: дорогие продукты в меню: '+prem);
  fresh(s=>{s.cap=900;s.mode='opt'});T.regenerate(true);c=T.computeCart();const tips=T.capTips(),h=T.viewMenu();
- ok(c.total>900&&tips.length>0,'нет подсказок «Чтобы уложиться в лимит»');ok(h.includes('Чтобы уложиться в лимит:')&&/data-act="(pick|noSnack)"/.test(h),'подсказки без кнопок');
+ ok(c.total>900&&tips.length>0,'нет подсказок «Чтобы уложиться в лимит»');ok(/Чтобы (уложиться в лимит|сэкономить):/.test(h)&&/data-act="(pick|noSnack|pair)"/.test(h),'подсказки без кнопок');
  ok(tips.every(t=>t.save>=10),'подсказка без реальной экономии');
  const sn=tips.find(t=>t.kind==='snack');if(sn){const before=c.total;T.ACT.noSnack(String(sn.d));const after=T.computeCart().total;ok(Math.abs(before-after-sn.save)<1,'экономия «убрать перекус» не совпала');
   const sv=T.servings(),K=T.personKcal(T.state.people[0]);ok(Math.abs(T.dayTotals(sn.d,sv,0).k/K-1)<=.05,'без перекуса калории дня не в норме');ok(!sv.some(x=>x.d===sn.d&&x.s==='s'),'перекус остался');T.ACT.undo();ok(!T.state.noSnack[sn.d],'отмена не вернула перекус');}

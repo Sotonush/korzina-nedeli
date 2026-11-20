@@ -1,5 +1,5 @@
 // Работа без интернета: оболочка приложения из кэша, цены — сначала из сети, шрифты — из кэша с фоновым обновлением.
-const VERSION = 'd4240929fe';
+const VERSION = '16d838d24a';
 const SHELL_CACHE = 'shell-' + VERSION;
 const FONTS_CACHE = 'fonts-v1';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];

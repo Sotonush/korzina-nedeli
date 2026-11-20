@@ -59,6 +59,8 @@ const ACT = {
   quick:v => { state.quick = v; changed('filter'); render(); },
   learner:() => { state.learner = !state.learner; changed('filter'); render(); },
   cook2:() => { state.cook2 = !state.cook2; state.noLo = {}; changed('score'); render(); },
+  equip:v => { if (v !== 'blender' && v !== 'oven') return; const e = equipState(); e[v] = !e[v]; state.equip = e; changed('filter'); render(); },
+  viewPerson:v => { state.viewPerson = Math.max(0, Math.round(+v) || 0); save(); render(); },
   health:v => { state.health[v] = !state.health[v]; if (v === 'diab' && state.health.diab) state.diabNo = false; safety(); render(); },
   lowcarb:() => { state.macro = 'lowcarb'; state.macroTouched = true; state.diabNo = true; changed(); render(); toast('БЖУ: меньше углеводов. Нажмите «Обновить меню»'); },
   diabNo:() => { state.diabNo = true; save(); render(); },
@@ -133,17 +135,31 @@ document.addEventListener('click', e => {
   if ((a === 'closeSheet' || a === 'cancel') && e.target.closest('[data-stop]') && !e.target.closest('button[data-act]')) return;
   const fn = ACT[a]; if (!fn) return;
   e.preventDefault();
+  // На телефоне нажатие кнопки не всегда снимает фокус с поля, и change не приходит до перерисовки:
+  // сохраняем набранное значение сами, иначе оно пропадёт вместе со старой разметкой.
+  const af = document.activeElement;
+  if (af && af !== el && af.dataset && af.dataset.bind && af.tagName === 'INPUT') commitBind(af);
   fn(el.dataset.v, el);
 });
 const BIND_KIND = {name:null, target:null, age:'score', height:'score', weight:'score', act:'score', goal:'score', cact:'score'};
-document.addEventListener('change', e => {
-  const el = e.target; const b = el.dataset && el.dataset.bind; if (!b) return;
-  const parts = b.split('.'); let val = el.value;
-  const numeric = el.type === 'number' || el.tagName === 'SELECT' && /(^|\.)(act|adj)$/.test(b);
-  if (numeric) val = val === '' ? '' : parseFloat(val);
-  if (parts[0] === 'p'){ const p = state.people[+parts[1]]; if (!p) return; p[parts[2]] = val; const k = BIND_KIND[parts[2]]; if (k) changed(k); else { estCache.key = ''; save(); } }
-  else { state[b] = val; if (b === 'adj'){ estCache.key = ''; save(); } else if (b === 'customEx') safety(); else changed(); }
-  softRender();
+const bindValue = el => { const b = el.dataset.bind, numeric = el.type === 'number' || el.tagName === 'SELECT' && /(^|\.)(act|adj)$/.test(b); return numeric ? (el.value === '' ? '' : parseFloat(el.value)) : el.value; };
+// Записать значение поля в состояние. Возвращает false, если записывать некуда или значение не изменилось.
+function commitBind(el){
+  const b = el.dataset && el.dataset.bind; if (!b) return false;
+  const parts = b.split('.'), val = bindValue(el);
+  if (parts[0] === 'p'){ const p = state.people[+parts[1]]; if (!p) return false; const same = p[parts[2]] === val && el.dataset.saved === String(val); p[parts[2]] = val; el.dataset.saved = String(val); if (same) return false; const k = BIND_KIND[parts[2]]; if (k) changed(k); else { estCache.key = ''; save(); } }
+  else { const same = state[b] === val && el.dataset.saved === String(val); state[b] = val; el.dataset.saved = String(val); if (same) return false; if (b === 'adj'){ estCache.key = ''; save(); } else if (b === 'customEx') safety(); else changed(); }
+  return true;
+}
+document.addEventListener('change', e => { if (commitBind(e.target)) softRender(); });
+// Пока печатают в поле человека или лимита — сразу пишем в состояние (без перерисовки) и обновляем калории на экране.
+document.addEventListener('input', e => {
+  const el = e.target, b = el.dataset && el.dataset.bind; if (!b || el.tagName !== 'INPUT') return;
+  const parts = b.split('.'), val = bindValue(el);
+  if (parts[0] === 'p'){ const p = state.people[+parts[1]]; if (!p) return; p[parts[2]] = val; if (typeof liveKcal === 'function') liveKcal(); }
+  else if (b === 'cap') state.cap = val;
+  else return;
+  save();
 });
 let pendingRender = false;
 const inField = () => { const a = document.activeElement; return a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && a.type !== 'range'; };
