@@ -1,5 +1,5 @@
 // Работа без интернета: оболочка приложения из кэша, цены — сначала из сети.
-const VERSION = '39ca3a1429';
+const VERSION = '399e9e2c99';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

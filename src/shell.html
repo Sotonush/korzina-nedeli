@@ -98,6 +98,22 @@ a.btn{text-decoration:none}
 .input:focus,.select:focus{border-color:var(--herb);outline:none}
 .select{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;padding-right:2rem}
 .select option{background:var(--surface);color:var(--ink)}
+.pick{display:flex;align-items:center;justify-content:space-between;gap:0.5rem;text-align:left;padding-right:0.75rem;cursor:pointer}
+.pick>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pick .chev{width:1.125rem;height:1.125rem;flex:none;color:var(--muted)}
+.pick[aria-expanded="true"],.pick:focus-visible{border-color:var(--herb)}
+.vh{position:absolute!important;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden}
+.pick-list{display:flex;flex-direction:column;gap:0.5rem;margin-top:1rem}
+.pick-opt{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;width:100%;min-height:3.5rem;padding:0.75rem 1rem;border-radius:0.875rem;border:1.5px solid var(--line);background:var(--surface);text-align:left}
+.pick-opt b{font-size:1rem;font-weight:700}
+.pick-opt small{font-size:0.8125rem;color:var(--muted);line-height:1.35}
+.pick-opt[aria-checked="true"]{border-color:var(--herb);background:var(--herb-soft)}
+.pick-opt[aria-checked="true"] small{color:var(--herb-strong)}
+.pick-dot{width:1.5rem;height:1.5rem;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;flex:none}
+.pick-dot svg{width:0.875rem;height:0.875rem;stroke:var(--herb-ink);opacity:0}
+.pick-opt[aria-checked="true"] .pick-dot{background:var(--herb);border-color:var(--herb)}
+.pick-opt[aria-checked="true"] .pick-dot svg{opacity:1}
+.gap2{gap:0.125rem}
 .input-unit{position:relative}
 .input-unit span{position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);font-size:0.8125rem;color:var(--faint);pointer-events:none}
 .input-unit .input{padding-right:2.5rem}

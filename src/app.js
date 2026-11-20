@@ -21,7 +21,7 @@ const MACROS = {
   lowcarb:{n:'Меньше углеводов',f:40},
   mass:{n:'Больше углеводов',f:22}
 };
-const ACTS = [[1.2,'Почти не двигаюсь'],[1.375,'Лёгкая: 1–3 трен. в нед.'],[1.55,'Средняя: 3–5 трен. в нед.'],[1.725,'Высокая: каждый день']];
+const ACTS = [[1.2,'Почти не двигаюсь','Сидячая работа, хожу мало'],[1.375,'Лёгкая: 1–3 трен. в нед.','Гуляю, тренируюсь 1–3 раза в неделю'],[1.55,'Средняя: 3–5 трен. в нед.','Тренируюсь 3–5 раз в неделю или много хожу'],[1.725,'Высокая: каждый день','Тренировки каждый день или физическая работа']];
 const STORES = {avg:'Средние цены по Бишкеку'};
 const STORE_RENAME = {frunze:'asia'};
 const MODES = {
@@ -610,7 +610,14 @@ function seg(act, options, cur, pre = ''){ return `<div class="seg" role="group"
 function numField(id, label, bind, val, unit, min, max){
   return `<label class="field" for="${id}"><span class="label">${label}</span><div class="input-unit"><input class="input num" id="${id}" type="number" inputmode="decimal" min="${min}" max="${max}" data-bind="${bind}" value="${esc(val)}"><span>${unit}</span></div></label>`;
 }
-function actSelect(id, bind, val){ return `<select class="select" id="${id}" data-bind="${bind}">${ACTS.map(([v,l]) => `<option value="${v}" ${+val===v?'selected':''}>${l}</option>`).join('')}</select>`; }
+// Свой выбор вместо системного списка: кнопка как поле + панель снизу. Скрытый <select> хранит значение,
+// поэтому сохранение идёт через тот же обработчик change, что и у остальных полей.
+function pickField(id, bind, val, opts){
+  const cur = opts.find(o => String(o[0]) === String(val)) || opts[0];
+  return `<button type="button" class="select pick" id="${id}" data-act="pickOpen" data-v="${id}" aria-haspopup="dialog"><span>${esc(cur[1])}</span>${IC.chev}</button>` +
+    `<select class="vh" id="${id}-sel" data-bind="${bind}" tabindex="-1" aria-hidden="true">${opts.map(o => `<option value="${o[0]}" data-sub="${esc(o[2] || '')}" ${String(o[0])===String(val)?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`;
+}
+function actSelect(id, bind, val){ return pickField(id, bind, val, ACTS); }
 const toggle = (act, on, title, hint, v = '') => `<button type="button" class="toggle" data-act="${act}" ${v?`data-v="${v}"`:''} ${pressed(on)}><span><b>${title}</b>${hint?`<br><span class="hint">${hint}</span>`:''}</span><span class="switch" aria-hidden="true"></span></button>`;
 const dislikeKeys = () => Object.keys(DISLIKES).filter(k => DISLIKES[k].ids.some(id => ING[id]));
 
@@ -659,7 +666,7 @@ function personCard(p, i){
     <div>${seg('psex', isChild ? [['f','Девочка'],['m','Мальчик']] : [['f','Женщина'],['m','Мужчина']], p.sex, i+':')}</div>
     ${isChild ? '' : `<div class="grid2">${numField(`p${i}-h`,'Рост',`p.${i}.height`,p.height,'см',120,220)}${numField(`p${i}-w`,'Вес',`p.${i}.weight`,p.weight,'кг',35,250)}</div>
     <div class="stack" style="gap:0.625rem"><label class="field" for="p${i}-act"><span class="label">Активность</span>${actSelect(`p${i}-act`,`p.${i}.act`,p.act)}</label>
-    <label class="field" for="p${i}-goal"><span class="label">Цель</span><select class="select" id="p${i}-goal" data-bind="p.${i}.goal">${Object.entries(GOALS).map(([k,g])=>`<option value="${k}" ${p.goal===k?'selected':''}>${g.n}</option>`).join('')}</select></label></div>`}
+    <label class="field" for="p${i}-goal"><span class="label">Цель</span>${pickField(`p${i}-goal`, `p.${i}.goal`, p.goal, Object.entries(GOALS).map(([k,g]) => [k, g.n, g.d]))}</label></div>`}
     <button type="button" class="more-btn" data-act="pdisOpen" data-v="${p.id}" aria-expanded="${open}"><span>Не любит: ${dl.length ? esc(dl.join(', ')) : 'ничего'}</span>${IC.chev}</button>
     ${open ? `<div class="chips">${dk.map(k => `<button type="button" class="chip" data-act="pdis" data-v="${i}:${k}" ${pressed((p.dislikes||[]).includes(k))}>${IC.tick}${DISLIKES[k].n}</button>`).join('')}</div>
       <p class="hint">Если в блюде есть то, что этот человек не ест, ему подберём своё блюдо на этот приём пищи.</p>` : ''}
@@ -737,7 +744,7 @@ function secBudget(){
       <div class="stack gap8">${Object.entries(MODES).map(([k,m])=>`<button type="button" class="option option-row" data-act="mode" data-v="${k}" ${pressed(state.mode===k)}><span class="stack gap2 minw0"><b>${m.n}</b><small>${m.d}</small></span><span class="price">≈ ${fmt(est[k])} сом</span></button>`).join('')}</div></div>
     <div class="${SD ? '' : 'grid2'}">
       ${numField('cap','Жёсткий лимит (необязательно)','cap',state.cap,'сом',0,100000)}
-      ${SD ? '' : `<label class="field" for="adj"><span class="label">Цены в вашем магазине</span><select class="select" id="adj" data-bind="adj">${[-15,-10,-5,0,5,10,15].map(v=>`<option value="${v}" ${+state.adj===v?'selected':''}>${v===0?'Как средние':(v>0?'+':'')+v+'%'}</option>`).join('')}</select></label>`}
+      ${SD ? '' : `<label class="field" for="adj"><span class="label">Цены в вашем магазине</span>${pickField('adj', 'adj', state.adj, [-15,-10,-5,0,5,10,15].map(v => [v, v===0?'Как средние':(v>0?'+':'')+v+'%']))}</label>`}
     </div>
     <p class="hint">Бюджет считается по целым упаковкам. ${priceSourceLine()}</p>
   </div>`;
@@ -987,6 +994,12 @@ const CONFIRMS = {
   reset:{t:'Удалить все данные?', d:'Профиль, меню, корзина, свои цены и записи веса удалятся с этого телефона. Это нельзя отменить.', ok:'Удалить', danger:true,
     fn:() => { try { localStorage.removeItem(LS); } catch(e){} state = defaults(); resetCaches(); scrollTop(); }}
 };
+function viewPick(){
+  if (!ui.pick) return '';
+  const {id, title, opts} = ui.pick;
+  return sheetWrap(title, `<div class="row-between start"><h2 class="title t21">${esc(title)}</h2><button type="button" class="icon-btn" data-act="closeSheet" aria-label="Закрыть">${IC.close}</button></div>
+    <div class="pick-list" role="radiogroup" aria-label="${esc(title)}">${opts.map((o, i) => `<button type="button" class="pick-opt" role="radio" aria-checked="${o.on}" data-act="pickSet" data-v="${i}"><span class="stack gap2"><b>${esc(o.text)}</b>${o.sub ? `<small>${esc(o.sub)}</small>` : ''}</span><i class="pick-dot">${IC.check}</i></button>`).join('')}</div>`);
+}
 function viewConfirm(){
   const c = CONFIRMS[ui.confirm]; if (!c) return '';
   return `<div class="sheet-wrap" data-act="cancel"><div class="sheet confirm" role="alertdialog" aria-modal="true" aria-labelledby="cf-t" aria-describedby="cf-d" data-stop><div class="grab"></div>
@@ -1007,8 +1020,8 @@ function render(){
   if (!state.onboarded){ html = viewOnboarding(); app.className = 'noTabs'; }
   else { html = state.tab === 'cart' ? viewCart() : state.tab === 'profile' ? viewProfile() : state.tab === 'progress' ? viewProgress() : viewMenu(); app.className = state.tab === 'profile' && state.dirty ? 'withFoot' : ''; }
   app.innerHTML = html;
-  layer.innerHTML = (state.onboarded ? viewTabs() + viewSheet() + viewReplace() : '') + viewConfirm();
-  document.body.style.overflow = ui.sheet || ui.replace || ui.confirm ? 'hidden' : '';
+  layer.innerHTML = (state.onboarded ? viewTabs() + viewSheet() + viewReplace() : '') + viewConfirm() + viewPick();
+  document.body.style.overflow = ui.sheet || ui.replace || ui.confirm || ui.pick ? 'hidden' : '';
 }
 // Свежие цены из JSON после загрузки страницы: {date, stores:{key:{n,source,url}}, items:{key:{ingId:{name,size,price,url}}}}
 function applyLivePrices(p){
@@ -1037,7 +1050,7 @@ function safety(){
 }
 function toggleIn(arr, v){ const i = arr.indexOf(v); i >= 0 ? arr.splice(i,1) : arr.push(v); }
 const scrollTop = () => window.scrollTo(0, 0);
-const closeAll = () => { ui.sheet = null; ui.replace = null; ui.confirm = null; };
+const closeAll = () => { ui.sheet = null; ui.replace = null; ui.confirm = null; ui.pick = null; };
 
 const ACT = {
   tab:v => { state.tab = v; ui.editing = null; ui.shareText = null; closeAll(); save(); render(); scrollTop(); },
@@ -1079,7 +1092,19 @@ const ACT = {
   undo:() => { if (ui.undo){ ui.undo(); ui.undo = null; toastEl.hidden = true; render(); toast('Вернули как было'); } },
   open:v => { const [d, s] = v.split(':'); ui.sheet = {d:+d, s}; render(); },
   openAlt:v => { const [d, s, i] = v.split(':'); ui.sheet = {d:+d, s, alt:+i}; render(); },
-  closeSheet:() => { ui.sheet = null; ui.replace = null; render(); },
+  closeSheet:() => { ui.sheet = null; ui.replace = null; ui.pick = null; render(); },
+  pickOpen:v => {
+    const sel = document.getElementById(v + '-sel'); if (!sel) return;
+    const lab = document.querySelector(`label[for="${v}"] .label`);
+    ui.pick = {id: v, title: lab ? lab.textContent : 'Выберите', opts: [...sel.options].map(o => ({value: o.value, text: o.textContent, sub: o.dataset.sub || '', on: o.selected}))};
+    render();
+  },
+  pickSet:v => {
+    const p = ui.pick; if (!p) return; const sel = document.getElementById(p.id + '-sel'), o = p.opts[+v];
+    ui.pick = null;
+    if (sel && o && sel.value !== o.value){ sel.value = o.value; sel.dispatchEvent(new Event('change', {bubbles: true})); }
+    render(); const btn = document.getElementById(p.id); if (btn) btn.focus({preventScroll: true});
+  },
   buy:v => { const c = state.cart[v] = state.cart[v] || {}; c.b = !c.b; save(); render(); },
   home:v => { const c = state.cart[v] = state.cart[v] || {}; c.h = !c.h; save(); render(); },
   more:v => { ui.open[v] = !ui.open[v]; render(); },
@@ -1133,7 +1158,7 @@ document.addEventListener('input', e => {
   changed();
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && (ui.sheet || ui.replace || ui.confirm)){ closeAll(); render(); }
+  if (e.key === 'Escape' && (ui.sheet || ui.replace || ui.confirm || ui.pick)){ closeAll(); render(); }
   if (e.key === 'Enter' && e.target.dataset && e.target.dataset.price){ ACT.savePrice(e.target.dataset.price); }
   if (e.key === 'Enter' && e.target.id === 'w-today'){ e.preventDefault(); ACT.addWeight(); }
 });
