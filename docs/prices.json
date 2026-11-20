@@ -677,7 +677,7 @@
    "beans": {
     "name": "Фасоль Globus красная, 425 мл ж/б",
     "size": 425,
-    "price": 150.99,
+    "price": 167.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%84%D0%B0%D1%81%D0%BE%D0%BB%D1%8C",
     "checked": "2026-11-20",
     "match": "ФАСОЛЬ GLOBUS КРАСНАЯ 425МЛ"
@@ -685,10 +685,10 @@
    "flour": {
     "name": "Мука «Акун» в/с, 1 кг",
     "size": 1000,
-    "price": 78.99,
+    "price": 82.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BC%D1%83%D0%BA%D0%B0",
     "checked": "2026-11-20",
-    "match": "Мука Акун в/сорт 1кг"
+    "match": "Мука Акун 1/сорт 1кг"
    },
    "bread": {
     "name": "Хлеб домашний пшеничный, 380 г (СП)",
@@ -701,15 +701,15 @@
    "lavash": {
     "name": "Лаваш Ul-Ai Testy большой, 500 г",
     "size": 500,
-    "price": 84.99,
+    "price": 91.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BB%D0%B0%D0%B2%D0%B0%D1%88",
     "checked": "2026-11-20",
-    "match": "ЛАВАШ UL-AI TESTY БОЛЬШОЙ ОБЫЧНЫЙ 500ГР"
+    "match": "ЛАВАШ UL-AI TESTY БОЛЬШОЙ СЫРНЫЙ 500ГР"
    },
    "potato": {
     "name": "Картофель (вес)",
     "size": "w",
-    "price": 39.99,
+    "price": 42.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BA%D0%B0%D1%80%D1%82%D0%BE%D1%84%D0%B5%D0%BB%D1%8C",
     "checked": "2026-11-20",
     "match": "КАРТОФЕЛЬ"
