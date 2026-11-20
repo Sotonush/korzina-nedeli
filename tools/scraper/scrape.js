@@ -52,35 +52,50 @@ async function scrapeGlobus(items, log) {
 }
 
 /* ---------- Азия и SPAR: магазины в Glovo, нужен браузер ---------- */
-async function scrapeGlovo(storeKey, items, log, browser) {
-  const page = await browser.newPage({ userAgent: UA, locale: 'ru-RU' });
-  const list = Object.entries(items).slice(0, +process.env.LIMIT || undefined); // LIMIT=5 — для пробного запуска
-  for (const [id, item] of list) {
+// Glovo отвечает серверам GitHub медленно, поэтому: долгое ожидание, повтор и второй проход
+// по всему, что не загрузилось, с паузой и новой вкладкой.
+const firstLine = m => String(m).split(/\r?\n/)[0];
+async function glovoItem(page, item) {
+  for (let attempt = 0; ; attempt++) {
     try {
-      for (let attempt = 0; ; attempt++) { // одна повторная попытка при медленной загрузке
-        try { await page.goto(item.url, { waitUntil: 'domcontentloaded', timeout: 45000 }); await page.waitForSelector('[class*=ItemRow_itemRowBody]', { timeout: 15000 }); break; }
-        catch (e) { if (attempt >= 1) throw e; await page.waitForTimeout(3000); }
-      }
-      await page.waitForTimeout(1500);
-      const rows = await page.$$eval('[class*=ItemRow_itemRowBody]', els => els.map(e => e.innerText));
-      const cands = rows.map(t => { const lines = t.split('\n').map(s => s.trim()).filter(Boolean);
-        const pl = lines.find(s => /KGS|сом/i.test(s) && !s.startsWith('-')); return { title: lines[0], price: pl ? num(pl) : NaN }; })
-        .filter(c => c.price > 0);
-      // Сначала точное название с сайта (запоминается после первой удачной проверки), затем похожее.
-      let hit = item.match && cands.find(c => c.title === item.match);
-      if (!hit) {
-        const want = tokens(item.name);
-        const scored = cands.map(c => ({ c, s: similarity(want, tokens(c.title)) - Math.min(.5, Math.abs(c.price - item.price) / item.price) }))
-          .sort((a, b) => b.s - a.s);
-        if (scored[0] && scored[0].s >= .55) hit = scored[0].c;
-      }
-      if (!hit) { log.miss.push(`${storeKey}/${id} (нет в выдаче)`); continue; }
-      const before = item.price;
-      accept(item, hit.price, log, `${storeKey}/${id}`);
-      if (item.price === hit.price && before !== undefined) item.match = hit.title;
-    } catch (e) { log.miss.push(`${storeKey}/${id} (${e.message.split('\n')[0]})`); }
+      await page.goto(item.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await page.waitForSelector('[class*=ItemRow_itemRowBody]', { timeout: 30000 });
+      break;
+    } catch (e) { if (attempt >= 1) return { err: firstLine(e.message) }; await page.waitForTimeout(5000); }
   }
-  await page.close();
+  await page.waitForTimeout(2000);
+  const rows = await page.$$eval('[class*=ItemRow_itemRowBody]', els => els.map(e => e.innerText));
+  const cands = rows.map(t => { const lines = t.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const pl = lines.find(s => /KGS|сом/i.test(s) && !s.startsWith('-')); return { title: lines[0], price: pl ? num(pl) : NaN }; })
+    .filter(c => c.price > 0);
+  // Сначала точное название с сайта (запоминается после первой удачной проверки), затем похожее.
+  let hit = item.match && cands.find(c => c.title === item.match);
+  if (!hit) {
+    const want = tokens(item.name);
+    const scored = cands.map(c => ({ c, s: similarity(want, tokens(c.title)) - Math.min(.5, Math.abs(c.price - item.price) / item.price) }))
+      .sort((a, b) => b.s - a.s);
+    if (scored[0] && scored[0].s >= .55) hit = scored[0].c;
+  }
+  return hit ? { hit } : { err: 'нет в выдаче' };
+}
+async function scrapeGlovo(storeKey, items, log, browser) {
+  let todo = Object.entries(items).slice(0, +process.env.LIMIT || undefined); // LIMIT=5 — для пробного запуска
+  for (let pass = 1; pass <= 2 && todo.length; pass++) {
+    if (pass > 1) await new Promise(r => setTimeout(r, 20000));
+    const page = await browser.newPage({ userAgent: UA, locale: 'ru-RU' });
+    const failed = [];
+    for (const [id, item] of todo) {
+      let res; try { res = await glovoItem(page, item); } catch (e) { res = { err: firstLine(e.message) }; }
+      if (res.hit) {
+        accept(item, res.hit.price, log, `${storeKey}/${id}`);
+        if (item.price === res.hit.price) item.match = res.hit.title;
+      } else if (pass < 2) failed.push([id, item]);
+      else log.miss.push(`${storeKey}/${id} (${res.err})`);
+      await page.waitForTimeout(1200);
+    }
+    await page.close();
+    todo = failed;
+  }
 }
 
 (async () => {
