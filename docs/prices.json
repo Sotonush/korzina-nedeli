@@ -1,5 +1,5 @@
 {
- "date": "2026-11-23",
+ "date": "2026-11-24",
  "stores": {
   "globus": {
    "n": "Глобус",
@@ -24,184 +24,184 @@
     "size": "w",
     "price": 335,
     "url": "https://globus-online.kg/ru-kg/good/6511322ed04b4a88b6f5fb93032aeb41000100010000",
-    "checked": "2026-11-22",
-    "stale": true
+    "checked": "2026-11-24"
    },
    "chicken_thigh": {
     "name": "Бедро цыпленка бройлера Тойбосс подл заморож вес",
     "size": "w",
     "price": 364,
     "url": "https://globus-online.kg/ru-kg/good/8d99214f025b4d64a941efa31b5044c1000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "chicken_leg": {
     "name": "Окорочка куриные заморож ГОСТ вес",
     "size": "w",
     "price": 264,
     "url": "https://globus-online.kg/ru-kg/good/1ceb613871f5418498bcc37f3b9477c1000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "liver": {
     "name": "Печень цыпленка бройлера Тойбосс подл заморож вес",
     "size": "w",
     "price": 216,
     "url": "https://globus-online.kg/ru-kg/good/f560c666bd4243869d825d7e2a244c11000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "mince": {
     "name": "Фарш Tasty говяжий 450г",
     "size": 450,
     "price": 272,
     "url": "https://globus-online.kg/ru-kg/good/db1291446cb641168ac028f4c4049bd0000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "turkey": {
     "name": "Филе грудки Индилайт зам.1000г РЦ",
     "size": 1000,
     "price": 1159,
     "url": "https://globus-online.kg/ru-kg/good/05e067924ba64aa3b2851ebcd8d12d3c000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "fish": {
     "name": "Филе минтая Vici заморож вес",
     "size": "w",
     "price": 615,
     "url": "https://globus-online.kg/ru-kg/good/3e631baeb7224796acad54838a373e96000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "tuna": {
     "name": "Филе тунца Пеликан натур. д/салатов 185г ж/б",
     "size": 185,
     "price": 190,
     "url": "https://globus-online.kg/ru-kg/good/8e13b569f42343df84264c4ef4f7c719000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "eggs": {
     "name": "Яйцо куриное 10шт РЦ",
     "size": 550,
     "price": 119,
     "url": "https://globus-online.kg/ru-kg/good/1b8f8e688b544eff967fd27ebb6054cb000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "milk": {
     "name": "Молоко Умут и К 2,5% 1л т/п",
     "size": 1000,
     "price": 68,
     "url": "https://globus-online.kg/ru-kg/good/f64c0801fa76430abd492454e60acd8b000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-23",
+    "stale": true
    },
    "kefir": {
     "name": "Кефир Умут и К 2,5% 1000г т/п",
     "size": 1000,
     "price": 68.8,
     "url": "https://globus-online.kg/ru-kg/good/b723b50fe847407ba0e549e55cfe4002000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "tvorog": {
     "name": "Творог Белая Река 5% 300г",
     "size": 300,
     "price": 162,
     "url": "https://globus-online.kg/ru-kg/good/594524bc5c1142529d7226aac07d92d1000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "yogurt": {
     "name": "Йогурт Болгарский 3,3% б/сах 500мл Юсупов ИП",
     "size": 500,
     "price": 104,
     "url": "https://globus-online.kg/ru-kg/good/4022c53d030e454ca33c72c7d881cb0d000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "cheese": {
     "name": "Сыр Белая река Голландский 45% вес в/у",
     "size": "w",
     "price": 721,
     "url": "https://globus-online.kg/ru-kg/good/c571bd2591de420ca1aa4f67dcc2c335000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "smetana": {
     "name": "Сметана Умут и К 20% 500мл т/п",
     "size": 500,
     "price": 79,
     "url": "https://globus-online.kg/ru-kg/good/c941d70f08e3430f89979e347360d58a000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-23",
+    "stale": true
    },
    "butter": {
     "name": "Масло сливочное Ak sut Крестьянское 72,5% 200г",
     "size": 200,
     "price": 160.8,
     "url": "https://globus-online.kg/ru-kg/good/4e085656b8a047e0adabb6a6d96cfb50000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "kaymak": {
     "name": "Каймак Умут и К 40% 250г п/у ЗМЖ",
     "size": 250,
     "price": 68.99,
     "url": "https://globus-online.kg/ru-kg/good/1f5b21c9b61a408f9e8e88332974bee1000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "ayran": {
     "name": "Айран Жети Баатыр 3.2% 1000г ОсОО Жети Баатыр ЗМЖ",
     "size": 1000,
     "price": 97,
     "url": "https://globus-online.kg/ru-kg/good/99f838aaa25944a58cb407b48298e6d4000200010000",
-    "checked": "2026-11-22",
-    "stale": true
+    "checked": "2026-11-24"
    },
    "rice": {
     "name": "Рис Краснодарский ТУ вес",
     "size": "w",
     "price": 89,
     "url": "https://globus-online.kg/ru-kg/good/7c5ba2eb261d4c0ab7e66f073c9534fc000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "rice_long": {
     "name": "Рис Пакистанский Кампа Азык фас/вес",
     "size": "w",
     "price": 115,
     "url": "https://globus-online.kg/ru-kg/good/30dd61c15fdb4ebd9056cb15ae041fe7000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "buckwheat": {
     "name": "Гречка вес",
     "size": "w",
     "price": 73.9,
     "url": "https://globus-online.kg/ru-kg/good/eda2ec673eba42b2b1f5cb08e714f3e9000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "oats": {
     "name": "Хлопья Геркулес овсян. вес",
     "size": "w",
     "price": 76,
     "url": "https://globus-online.kg/ru-kg/good/bf9a367193c14e828167de63dca28739000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "pasta": {
     "name": "Макароны Акун трубочки вес",
     "size": "w",
     "price": 65,
     "url": "https://globus-online.kg/ru-kg/good/9de23440d3004a36a2b862f19a0e5289000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "noodles": {
     "name": "Лапша на лагман 1 кг СП",
     "size": 1000,
     "price": 89.9,
     "url": "https://globus-online.kg/ru-kg/good/43d96a20abdd4b0a8c54d59713a1dd03000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "kesme": {
     "name": "Лапша Акун Кесме 1кг",
     "size": 1000,
     "price": 114,
     "url": "https://globus-online.kg/ru-kg/good/b6dd885af261434abbce0843a12f3bf6000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "bulgur": {
     "name": "Крупа Булгур Кампа азык фас/вес",
     "size": "w",
     "price": 140,
     "url": "https://globus-online.kg/ru-kg/good/83b1f529eba644a9a1e283bf0671c32a000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "lentils": {
     "name": "Чечевица Макфа красная 450г",
@@ -216,35 +216,35 @@
     "size": "w",
     "price": 125,
     "url": "https://globus-online.kg/ru-kg/good/8280ac30377343b4b8bc6e92bd4d2b55000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "beans": {
     "name": "Фасоль MIKADO красная в с/с 425мл",
     "size": 425,
     "price": 95.28,
     "url": "https://globus-online.kg/ru-kg/good/cb242016d25943e396626c2cc9aa2e35000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "flour": {
     "name": "Мука Астык в/с 2кг",
     "size": 2000,
     "price": 116,
     "url": "https://globus-online.kg/ru-kg/good/02a079571ae24028afbf493f5983426d000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "millet": {
     "name": "Пшено Царь шлифованное 800г",
     "size": 800,
     "price": 93,
     "url": "https://globus-online.kg/ru-kg/good/f7d1d78c6c294eb9b4f4910051895918000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "semolina": {
     "name": "Крупа манная Царь 800г",
     "size": 800,
     "price": 96,
     "url": "https://globus-online.kg/ru-kg/good/5ea745b620a64574bf43907932b19279000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "bread": {
     "name": "Хлеб подовый 300гр СП GL",
@@ -257,304 +257,306 @@
    "bread_rye": {
     "name": "Хлеб Рижский 390 г СП GL",
     "size": 390,
-    "price": 65.9,
+    "price": 75.9,
     "url": "https://globus-online.kg/ru-kg/good/97fcfbf9bd9c4b44b457612439710615000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "lepeshka": {
     "name": "Лепешка тандырная 400г Коргонбаева ИП",
     "size": 400,
     "price": 52,
     "url": "https://globus-online.kg/ru-kg/good/e6c464da1baa422bbb30fe9ac9e5291e000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "lavash": {
     "name": "Лаваш ECO 420г 5шт",
     "size": 420,
     "price": 65.9,
     "url": "https://globus-online.kg/ru-kg/good/a4e1022f122a4d989febd47e5538008d000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "potato": {
     "name": "Картофель вес",
     "size": "w",
     "price": 46,
     "url": "https://globus-online.kg/ru-kg/good/417ff179083a4c94a0edc9b96bd1c395000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "onion": {
     "name": "Лук репчатый вес",
     "size": "w",
     "price": 43,
     "url": "https://globus-online.kg/ru-kg/good/979b28b9e60c40a09077c7f1339d8dda000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "carrot": {
     "name": "Морковь мытая вес",
     "size": "w",
     "price": 34,
     "url": "https://globus-online.kg/ru-kg/good/f4c437e4e6c74f048cc5f77a3ea64cbe000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "cabbage": {
     "name": "Капуста вес",
     "size": "w",
     "price": 25,
     "url": "https://globus-online.kg/ru-kg/good/42b40945c94f4a37a85a486a087def20000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "sauerkraut": {
     "name": "Капуста Вкусомания квашенная 1кг",
     "size": 1000,
     "price": 152,
     "url": "https://globus-online.kg/ru-kg/good/ea1a2868d91e4a8b8ffa6dcc23d51a01000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "tomato": {
     "name": "Помидоры вес",
     "size": "w",
-    "price": 154,
+    "price": 144,
     "url": "https://globus-online.kg/ru-kg/good/f1eb82e519d94ff981bd71140f690d52000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "cucumber": {
     "name": "Огурцы Кураж вес",
     "size": "w",
     "price": 253,
     "url": "https://globus-online.kg/ru-kg/good/07d640d209d840de9892cfb7ce92ca3d000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "pepper": {
     "name": "Перец Ласточка красный вес",
     "size": "w",
     "price": 165,
     "url": "https://globus-online.kg/ru-kg/good/51251eb02fd14e49ba1bad2a893c0abf000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "zucchini": {
     "name": "Кабачки вес",
     "size": "w",
     "price": 168,
     "url": "https://globus-online.kg/ru-kg/good/061a396b08544222ac79faa98be5f63d000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "eggplant": {
     "name": "Баклажаны вес",
     "size": "w",
     "price": 173,
     "url": "https://globus-online.kg/ru-kg/good/8f72b27fa2fa4680bca0cabd9b3b17d4000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "pumpkin": {
     "name": "Тыква вес",
     "size": "w",
     "price": 45,
     "url": "https://globus-online.kg/ru-kg/good/63baca04c0cb4903955cf988352dbce5000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "beet": {
     "name": "Свекла вес",
     "size": "w",
     "price": 38,
     "url": "https://globus-online.kg/ru-kg/good/85e42cc09fd84f5c89589b0c2d7ca288000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "radish": {
     "name": "Редька вес",
     "size": "w",
     "price": 29,
     "url": "https://globus-online.kg/ru-kg/good/b38050b2c20742f38bc1bdd2ba5d5ad3000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "broccoli": {
     "name": "Капуста Брокколи вес",
     "size": "w",
     "price": 159,
     "url": "https://globus-online.kg/ru-kg/good/32d4203c485a4deda7c7851bcaba5232000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "veg_mix": {
     "name": "Смесь овощная Vici Мексиканская 400г",
     "size": 400,
     "price": 185.49,
     "url": "https://globus-online.kg/ru-kg/good/48e5e3ff819241908a9b2c340a4efca9000300010001",
-    "checked": "2026-11-21",
-    "stale": true
+    "checked": "2026-11-24"
    },
    "corn": {
     "name": "Кукуруза Sparco ТУ конс. 400г ж/б РЦ",
     "size": 400,
     "price": 95.28,
     "url": "https://globus-online.kg/ru-kg/good/bd69d76234ad4d65b87a3e0006fed048000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "mushrooms": {
     "name": "Грибы Шампиньоны фасованные вес",
     "size": "w",
     "price": 389,
     "url": "https://globus-online.kg/ru-kg/good/9905ed980f9d469888dadc3efc68b6fe000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "garlic": {
     "name": "Чеснок вес",
     "size": "w",
     "price": 110,
     "url": "https://globus-online.kg/ru-kg/good/6828d37edf754f6a8a4ac7740428f4af000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "greens": {
     "name": "Укроп шт",
     "size": 50,
     "price": 19,
     "url": "https://globus-online.kg/ru-kg/good/645ad9bc5b4d43b7ab9cbf89d9f484bf000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "apple": {
     "name": "Яблоки вес",
     "size": "w",
     "price": 65,
     "url": "https://globus-online.kg/ru-kg/good/f719fdb8abf547638470c00d29ec95c9000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-23",
+    "stale": true
    },
    "banana": {
     "name": "Бананы в/с вес",
     "size": "w",
-    "price": 154.5,
+    "price": 148.5,
     "url": "https://globus-online.kg/ru-kg/good/39e6365c32f949dbbe1d39bd42429b4f000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "mandarin": {
     "name": "Мандарины вес",
     "size": "w",
     "price": 143,
     "url": "https://globus-online.kg/ru-kg/good/2c7cff8dc205477ab8319118f7731b00000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "lemon": {
     "name": "Лимоны вес",
     "size": "w",
     "price": 124,
     "url": "https://globus-online.kg/ru-kg/good/ed08b72fa31f4c1b95dad580cae51daf000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "berries": {
     "name": "Клубника заморож 200г Перетятько",
     "size": 200,
     "price": 108,
     "url": "https://globus-online.kg/ru-kg/good/802d56e5a0fc42cbbce9b13047996c32000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "dried_fruit": {
     "name": "Сухофрукты Фрутовит курага 200г Кыргызстан 30",
     "size": 200,
     "price": 197,
     "url": "https://globus-online.kg/ru-kg/good/1dec1e184dcf475394c290773e8b3e8b000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-23",
+    "stale": true
    },
    "raisins": {
     "name": "Сухофрукты Кишмиш сушен.кр. в/с вес Финик ОсОО",
     "size": "w",
     "price": 372,
     "url": "https://globus-online.kg/ru-kg/good/f0605185446342bb8763ff739a09ecb4000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "nuts": {
     "name": "Орехи Грецкие очищ. вес Финик ОсОО",
     "size": "w",
     "price": 744,
     "url": "https://globus-online.kg/ru-kg/good/f16209781ae64270a24ca7f0867e32fb000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "oil": {
     "name": "Масло подсолнечное Ласка 1л РЦ",
     "size": 920,
     "price": 143,
     "url": "https://globus-online.kg/ru-kg/good/d620988254054bfb8380220c7a2984ea000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-23",
+    "stale": true
    },
    "tomato_paste": {
     "name": "Паста томатная ТоматKG 500г ст/б",
     "size": 500,
     "price": 119,
     "url": "https://globus-online.kg/ru-kg/good/cd43f244786345adb417eac47d528c93000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "soy_sauce": {
     "name": "Соус Фая соевый классический 500г",
     "size": 500,
     "price": 118,
     "url": "https://globus-online.kg/ru-kg/good/c7640375917e4c42864f0d9a8f482fc6000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "honey": {
     "name": "Мед Мальва натуральный 700г",
     "size": 700,
     "price": 335,
     "url": "https://globus-online.kg/ru-kg/good/701dd25c7a6a488f91a67c78934a1f32000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "peanut_butter": {
     "name": "Паста арахисовая Runner 300г cт/б",
     "size": 300,
     "price": 219,
     "url": "https://globus-online.kg/ru-kg/good/d6305787d37a4ba9b0376a11494cb00e000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "starch": {
     "name": "Крахмал кукурузный Татымал в/с 200г",
     "size": 200,
     "price": 65.8,
     "url": "https://globus-online.kg/ru-kg/good/66d7eb68f9654bb4ab1206f45e08f24c000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "vinegar": {
     "name": "Уксус №1 столовый 9% 300мл п/б PL1",
     "size": 300,
     "price": 35.28,
     "url": "https://globus-online.kg/ru-kg/good/859ea83bb9294cfc87dd250949e37a03000200010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "tea": {
     "name": "Чай ASMAN черн. Традиционно Восточный 250г",
     "size": 250,
     "price": 208.5,
     "url": "https://globus-online.kg/ru-kg/good/cb13f6296f874d5cb103c8fad895496a000200010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "pelmeni": {
     "name": "Пельмени Садко халал говядина 450г",
     "size": 450,
     "price": 87.29,
     "url": "https://globus-online.kg/ru-kg/good/0ae16002278341a6ad8e5bcf01e8f89a000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "chuchvara": {
     "name": "Чучвара Садко мусульманские говядина 450г",
     "size": 450,
     "price": 114,
     "url": "https://globus-online.kg/ru-kg/good/7af1590050c240e0a8550a63dfbd1892000300010001",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "chicken_breast@chilled": {
     "name": "Филе куриное охл вес GL",
     "size": "w",
     "price": 554,
     "url": "https://globus-online.kg/ru-kg/good/96003deeeb1546019404766f87bf9f4d000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "chicken_thigh@chilled": {
     "name": "Бедро цыпленка бройлера Тойбосс охл.вес в/у",
     "size": "w",
     "price": 419,
     "url": "https://globus-online.kg/ru-kg/good/0e2af8c0e1cb49d49fce6f820dc2dfda000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    },
    "chicken_leg@chilled": {
     "name": "Окорочка цыпленка бройлера Тойбосс охл. вес в/у",
     "size": "w",
     "price": 389,
     "url": "https://globus-online.kg/ru-kg/good/992874899d154ed1abb3f1e66e03d5cc000100010000",
-    "checked": "2026-11-23"
+    "checked": "2026-11-24"
    }
   },
   "asia": {
@@ -563,7 +565,7 @@
     "size": "w",
     "price": 511.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%84%D0%B8%D0%BB%D0%B5%20%D0%BA%D1%83%D1%80%D0%B8%D0%BD%D0%BE%D0%B5",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ФИЛЕ ЦБ CHICKODELLI ЗАМ"
    },
    "chicken_thigh": {
@@ -571,7 +573,7 @@
     "size": "w",
     "price": 398.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%B1%D0%B5%D0%B4%D1%80%D0%BE",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "БЕДРО КУРИНОЕ ТОЙБОСС ЗАМ"
    },
    "chicken_leg": {
@@ -579,7 +581,7 @@
     "size": "w",
     "price": 385.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BE%D0%BA%D0%BE%D1%80%D0%BE%D1%87%D0%BA%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ОКОРОЧКА КУРИНЫЕ СО СПИНКОЙ ТОЙБОСС ЗАМ"
    },
    "liver": {
@@ -587,7 +589,7 @@
     "size": "w",
     "price": 244.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BF%D0%B5%D1%87%D0%B5%D0%BD%D1%8C",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ПЕЧЕНЬ КУРИНАЯ ТОЙБОСС ЗАМ"
    },
    "mince": {
@@ -595,7 +597,7 @@
     "size": 450,
     "price": 307.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%84%D0%B0%D1%80%D1%88",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ФАРШ TASTY ГОВЯЖИЙ ЗАМ 450ГР"
    },
    "fish": {
@@ -603,7 +605,7 @@
     "size": "w",
     "price": 491.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BF%D0%B0%D0%BD%D0%B3%D0%B0%D1%81%D0%B8%D1%83%D1%81",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Филе Пангасиуса Vici В/У Зам Вес"
    },
    "tuna": {
@@ -611,15 +613,15 @@
     "size": 185,
     "price": 182.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%82%D1%83%D0%BD%D0%B5%D1%86",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ТУНЕЦ ПЕЛИКАН Д/САЛАТОВ НАТУРАЛЬНЫЙ Ж/Б 185ГР"
    },
    "eggs": {
     "name": "ЯЙЦО КУРИНОЕ СЕМЕЙНЫЕ 10ШТ",
     "size": 550,
-    "price": 152.99,
+    "price": 169.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%8F%D0%B9%D1%86%D0%BE",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ЯЙЦО КУРИНОЕ СЕМЕЙНЫЕ 10ШТ"
    },
    "milk": {
@@ -636,7 +638,7 @@
     "size": 1000,
     "price": 76.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BA%D0%B5%D1%84%D0%B8%D1%80",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "КЕФИР УМУТ 2,5% Т/П 1Л"
    },
    "tvorog": {
@@ -644,7 +646,7 @@
     "size": 300,
     "price": 175.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%82%D0%B2%D0%BE%D1%80%D0%BE%D0%B3",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ТВОРОГ БЕЛАЯ РЕКА ЗЕРНИСТЫЙ 5% 300ГР"
    },
    "smetana": {
@@ -652,23 +654,23 @@
     "size": 500,
     "price": 104.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%81%D0%BC%D0%B5%D1%82%D0%B0%D0%BD%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "СМЕТАНА УМУТ 20% 500ГР"
    },
    "butter": {
     "name": "МАСЛО СЛИВОЧНОЕ АЛА-ТОО MILK ВЫСОКОКАЧЕСТВЕННОЕ 72,5% 180ГР БЗМЖ",
     "size": 180,
-    "price": 129.99,
+    "price": 144.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BC%D0%B0%D1%81%D0%BB%D0%BE%20%D1%81%D0%BB%D0%B8%D0%B2%D0%BE%D1%87%D0%BD%D0%BE%D0%B5",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "МАСЛО СЛИВОЧНОЕ АЛА-ТОО MILK ВЫСОКОКАЧЕСТВЕННОЕ 72,5% 180ГР БЗМЖ"
    },
    "kaymak": {
     "name": "КАЙМАК АК СУТ 40% 250ГР",
     "size": 250,
-    "price": 69.99,
+    "price": 75.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BA%D0%B0%D0%B9%D0%BC%D0%B0%D0%BA",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "КАЙМАК АК СУТ 40% 250ГР"
    },
    "ayran": {
@@ -676,7 +678,7 @@
     "size": 1000,
     "price": 102.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%B0%D0%B9%D1%80%D0%B0%D0%BD",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "АЙРАН ЖЕТИ БААТЫР ДОМАШНИЙ 1000ГР БЗМЖ"
    },
    "rice": {
@@ -685,22 +687,23 @@
     "price": 99.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%80%D0%B8%D1%81",
     "checked": "2026-11-23",
-    "match": "Рис Байдала"
+    "match": "Рис Байдала",
+    "stale": true
    },
    "rice_long": {
     "name": "Рис Элита",
     "size": "w",
     "price": 154.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%80%D0%B8%D1%81",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Рис Элита"
    },
    "buckwheat": {
     "name": "КРУПА ГРЕЧНЕВАЯ МАКФА ЯДРИЦА 800ГР",
     "size": 800,
-    "price": 148.99,
+    "price": 165.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%B3%D1%80%D0%B5%D1%87%D0%BA%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "КРУПА ГРЕЧНЕВАЯ МАКФА ЯДРИЦА 800ГР"
    },
    "oats": {
@@ -708,7 +711,7 @@
     "size": "w",
     "price": 84.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%B3%D0%B5%D1%80%D0%BA%D1%83%D0%BB%D0%B5%D1%81",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "КРУПА ХЛОПЬЯ ОВСЯНЫЕ ГЕРКУЛЕС"
    },
    "pasta": {
@@ -716,7 +719,7 @@
     "size": 400,
     "price": 78.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BC%D0%B0%D0%BA%D0%B0%D1%80%D0%BE%D0%BD%D1%8B",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Макароны Роллтон рожки 400гр"
    },
    "noodles": {
@@ -724,7 +727,7 @@
     "size": 800,
     "price": 169.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BB%D0%B0%D0%BF%D1%88%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ЛАПША TASTY НА ЛАГМАН 800ГР"
    },
    "kesme": {
@@ -732,7 +735,7 @@
     "size": 700,
     "price": 136.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BB%D0%B0%D0%BF%D1%88%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ЛАПША ЯИЧНАЯ ELSYOR ТОЙ КЕСМЕ ПЛОСКАЯ №2 700ГР"
    },
    "bulgur": {
@@ -740,34 +743,31 @@
     "size": "w",
     "price": 159.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%B1%D1%83%D0%BB%D0%B3%D1%83%D1%80",
-    "checked": "2026-11-22",
-    "match": "РИС БУЛГУР КРУПНЫЙ",
-    "stale": true
+    "checked": "2026-11-24",
+    "match": "РИС БУЛГУР КРУПНЫЙ"
    },
    "lentils": {
     "name": "КРУПА ЧЕЧЕВИЦА КРАСНАЯ BASHAN 1КГ",
     "size": 1000,
     "price": 267.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%87%D0%B5%D1%87%D0%B5%D0%B2%D0%B8%D1%86%D0%B0",
-    "checked": "2026-11-22",
-    "match": "КРУПА ЧЕЧЕВИЦА КРАСНАЯ BASHAN 1КГ",
-    "stale": true
+    "checked": "2026-11-24",
+    "match": "КРУПА ЧЕЧЕВИЦА КРАСНАЯ BASHAN 1КГ"
    },
    "chickpeas": {
     "name": "КРУПА НОКОТ BASHAN 1КГ",
     "size": 1000,
     "price": 362.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BD%D1%83%D1%82",
-    "checked": "2026-11-22",
-    "match": "КРУПА НОКОТ BASHAN 1КГ",
-    "stale": true
+    "checked": "2026-11-24",
+    "match": "КРУПА НОКОТ BASHAN 1КГ"
    },
    "beans": {
     "name": "ФАСОЛЬ GLOBUS КРАСНАЯ 425МЛ",
     "size": 425,
-    "price": 150.99,
+    "price": 167.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%84%D0%B0%D1%81%D0%BE%D0%BB%D1%8C",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ФАСОЛЬ GLOBUS КРАСНАЯ 425МЛ"
    },
    "flour": {
@@ -776,7 +776,8 @@
     "price": 78.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BC%D1%83%D0%BA%D0%B0",
     "checked": "2026-11-23",
-    "match": "Мука Акун в/сорт 1кг"
+    "match": "Мука Акун в/сорт 1кг",
+    "stale": true
    },
    "millet": {
     "name": "КРУПА ПШЕНО",
@@ -784,7 +785,8 @@
     "price": 76.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BF%D1%88%D0%B5%D0%BD%D0%BE",
     "checked": "2026-11-23",
-    "match": "КРУПА ПШЕНО"
+    "match": "КРУПА ПШЕНО",
+    "stale": true
    },
    "semolina": {
     "name": "КРУПА МАННАЯ ОРГАНИК 700ГР",
@@ -792,7 +794,8 @@
     "price": 86.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BC%D0%B0%D0%BD%D0%BD%D0%B0%D1%8F",
     "checked": "2026-11-23",
-    "match": "КРУПА МАННАЯ ОРГАНИК 700ГР"
+    "match": "КРУПА МАННАЯ ОРГАНИК 700ГР",
+    "stale": true
    },
    "bread": {
     "name": "Хлеб подовой 300гр сп шт",
@@ -800,14 +803,15 @@
     "price": 17.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%85%D0%BB%D0%B5%D0%B1",
     "checked": "2026-11-23",
-    "match": "Хлеб подовой 300гр сп шт"
+    "match": "Хлеб подовой 300гр сп шт",
+    "stale": true
    },
    "bread_rye": {
     "name": "ХЛЕБ СЕРЫЙ ЭЛИТА БОРОДИНО 500ГР",
     "size": 500,
     "price": 122.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%85%D0%BB%D0%B5%D0%B1",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ХЛЕБ СЕРЫЙ ЭЛИТА БОРОДИНО 500ГР"
    },
    "lavash": {
@@ -815,7 +819,7 @@
     "size": 500,
     "price": 84.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BB%D0%B0%D0%B2%D0%B0%D1%88",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ЛАВАШ UL-AI TESTY БОЛЬШОЙ ОБЫЧНЫЙ 500ГР"
    },
    "potato": {
@@ -823,15 +827,15 @@
     "size": "w",
     "price": 42.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BA%D0%B0%D1%80%D1%82%D0%BE%D1%84%D0%B5%D0%BB%D1%8C",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "КАРТОФЕЛЬ"
    },
    "onion": {
     "name": "ЛУК РЕПЧАТЫЙ",
     "size": "w",
-    "price": 39.99,
+    "price": 46.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BB%D1%83%D0%BA",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ЛУК РЕПЧАТЫЙ"
    },
    "cabbage": {
@@ -839,23 +843,23 @@
     "size": "w",
     "price": 27.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BA%D0%B0%D0%BF%D1%83%D1%81%D1%82%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "КАПУСТА"
    },
    "sauerkraut": {
     "name": "КАПУСТА КВАШЕННАЯ 1кг",
     "size": 1000,
-    "price": 208.99,
+    "price": 194.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BA%D0%B0%D0%BF%D1%83%D1%81%D1%82%D0%B0",
-    "checked": "2026-11-23",
-    "match": "КАПУСТА КВАШЕННАЯ 1кг"
+    "checked": "2026-11-24",
+    "match": "КАПУСТА КВАШЕННАЯ"
    },
    "tomato": {
     "name": "ПОМИДОР ТЕПЛИЧНЫЙ",
     "size": "w",
-    "price": 219.99,
+    "price": 231.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BF%D0%BE%D0%BC%D0%B8%D0%B4%D0%BE%D1%80",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ПОМИДОР ТЕПЛИЧНЫЙ"
    },
    "cucumber": {
@@ -863,16 +867,15 @@
     "size": "w",
     "price": 267.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BE%D0%B3%D1%83%D1%80%D0%B5%D1%86",
-    "checked": "2026-11-22",
-    "match": "ОГУРЕЦ КУРАЖ",
-    "stale": true
+    "checked": "2026-11-24",
+    "match": "ОГУРЕЦ КУРАЖ"
    },
    "pepper": {
     "name": "ПЕРЕЦ ЛАСТОЧКА КРАСНЫЙ",
     "size": "w",
     "price": 174.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BF%D0%B5%D1%80%D0%B5%D1%86",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ПЕРЕЦ ЛАСТОЧКА КРАСНЫЙ"
    },
    "zucchini": {
@@ -889,7 +892,7 @@
     "size": "w",
     "price": 48.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%82%D1%8B%D0%BA%D0%B2%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ТЫКВА"
    },
    "beet": {
@@ -897,15 +900,15 @@
     "size": "w",
     "price": 41.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%81%D0%B2%D0%B5%D0%BA%D0%BB%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "СВЕКЛА"
    },
    "broccoli": {
     "name": "КАПУСТА БРОККОЛИ",
     "size": "w",
-    "price": 168.99,
+    "price": 161.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%B1%D1%80%D0%BE%D0%BA%D0%BA%D0%BE%D0%BB%D0%B8",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "КАПУСТА БРОККОЛИ"
    },
    "veg_mix": {
@@ -913,7 +916,7 @@
     "size": 400,
     "price": 247.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%81%D0%BC%D0%B5%D1%81%D1%8C%20%D0%BE%D0%B2%D0%BE%D1%89%D0%BD%D0%B0%D1%8F",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ОВОЩИ ВЕСЕННИЕ VICI 400ГР"
    },
    "corn": {
@@ -921,7 +924,7 @@
     "size": 425,
     "price": 127.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BA%D1%83%D0%BA%D1%83%D1%80%D1%83%D0%B7%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "КУКУРУЗА КОНСЕРВИРОВАННАЯ GLOBUS Ж/Б 425МЛ"
    },
    "greens": {
@@ -929,7 +932,7 @@
     "size": 50,
     "price": 21.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%83%D0%BA%D1%80%D0%BE%D0%BF",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ЗЕЛЕНЬ УКРОП 1ПУЧОК"
    },
    "banana": {
@@ -937,23 +940,23 @@
     "size": "w",
     "price": 176.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%B1%D0%B0%D0%BD%D0%B0%D0%BD",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "БАНАН"
    },
    "mandarin": {
     "name": "МАНДАРИН МАРОККО",
     "size": "w",
-    "price": 337.99,
+    "price": 317.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BC%D0%B0%D0%BD%D0%B4%D0%B0%D1%80%D0%B8%D0%BD",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "МАНДАРИН МАРОККО"
    },
    "lemon": {
     "name": "ЛИМОН АРГЕНТИНА",
     "size": "w",
-    "price": 136.99,
+    "price": 144.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BB%D0%B8%D0%BC%D0%BE%D0%BD",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ЛИМОН АРГЕНТИНА"
    },
    "dried_fruit": {
@@ -961,7 +964,7 @@
     "size": "w",
     "price": 531.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BA%D1%83%D1%80%D0%B0%D0%B3%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Курага в/с"
    },
    "raisins": {
@@ -969,7 +972,7 @@
     "size": "w",
     "price": 346.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%B8%D0%B7%D1%8E%D0%BC",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ИЗЮМ ЧЕРНЫЙ 1 СОРТ"
    },
    "nuts": {
@@ -977,7 +980,7 @@
     "size": "w",
     "price": 742.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BE%D1%80%D0%B5%D1%85%D0%B8",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Орех грецкий очищ/белый в/сорт"
    },
    "oil": {
@@ -985,7 +988,7 @@
     "size": 920,
     "price": 213.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BC%D0%B0%D1%81%D0%BB%D0%BE%20%D0%BF%D0%BE%D0%B4%D1%81%D0%BE%D0%BB%D0%BD%D0%B5%D1%87%D0%BD%D0%BE%D0%B5",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "МАСЛО ПОДСОЛНЕЧНОЕ ЗОЛОТАЯ СЕМЕЧКА 1Л"
    },
    "tomato_paste": {
@@ -993,15 +996,15 @@
     "size": 450,
     "price": 97.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%82%D0%BE%D0%BC%D0%B0%D1%82%D0%BD%D0%B0%D1%8F%20%D0%BF%D0%B0%D1%81%D1%82%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ПАСТА ТОМАТНАЯ ТАТЫМ 450ГР СТ/Б"
    },
    "soy_sauce": {
     "name": "СОУС СОЕВЫЙ AFAKO КЛАССИЧЕСКИЙ П/Б 200ГР",
     "size": 200,
-    "price": 61.99,
+    "price": 68.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%81%D0%BE%D0%B5%D0%B2%D1%8B%D0%B9%20%D1%81%D0%BE%D1%83%D1%81",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "СОУС СОЕВЫЙ AFAKO КЛАССИЧЕСКИЙ П/Б 200ГР"
    },
    "honey": {
@@ -1009,7 +1012,7 @@
     "size": 550,
     "price": 275.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BC%D0%B5%D0%B4",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Мед Цветочный пл/б 550гр"
    },
    "peanut_butter": {
@@ -1017,7 +1020,7 @@
     "size": 300,
     "price": 244.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%B0%D1%80%D0%B0%D1%85%D0%B8%D1%81%D0%BE%D0%B2%D0%B0%D1%8F%20%D0%BF%D0%B0%D1%81%D1%82%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Паста арахисовая Runner 300гр"
    },
    "starch": {
@@ -1025,7 +1028,7 @@
     "size": 200,
     "price": 73.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BA%D1%80%D0%B0%D1%85%D0%BC%D0%B0%D0%BB",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "КРАХМАЛ ТАТЫМАЛ КУКУРУЗНЫЙ 200ГР"
    },
    "vinegar": {
@@ -1033,7 +1036,7 @@
     "size": 500,
     "price": 113.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%83%D0%BA%D1%81%D1%83%D1%81",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "УКСУС БК ЛЮБИМЫЙ ЯБЛОЧНЫЙ НАТУРАЛЬНЫЙ 500ГР"
    },
    "tea": {
@@ -1041,23 +1044,23 @@
     "size": 100,
     "price": 195.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%87%D0%B0%D0%B9%20%D1%87%D0%B5%D1%80%D0%BD%D1%8B%D0%B9",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Чай Tess Ceylon листовой 100гр"
    },
    "pelmeni": {
     "name": "ПЕЛЬМЕНИ АТАМАН СТОЛИЧНЫЕ 1КГ",
     "size": 1000,
-    "price": 322.99,
+    "price": 358.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D0%BF%D0%B5%D0%BB%D1%8C%D0%BC%D0%B5%D0%BD%D0%B8",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "ПЕЛЬМЕНИ АТАМАН СТОЛИЧНЫЕ 1КГ"
    },
    "chuchvara": {
     "name": "Чучвара Атаман Настоящая 1кг",
     "size": 1000,
-    "price": 361.99,
+    "price": 402.99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/set-gipermarketov-frunze-bsk?search=%D1%87%D1%83%D1%87%D0%B2%D0%B0%D1%80%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Чучвара Атаман Настоящая 1кг"
    }
   },
@@ -1067,7 +1070,7 @@
     "size": "w",
     "price": 335,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%84%D0%B8%D0%BB%D0%B5%20%D0%BA%D1%83%D1%80%D0%B8%D0%BD%D0%BE%D0%B5",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Филе куриное заморож вес Импорт"
    },
    "chicken_thigh": {
@@ -1075,7 +1078,7 @@
     "size": "w",
     "price": 332,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%B1%D0%B5%D0%B4%D1%80%D0%BE",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Бедро цыпленка бройлера Латифа Халал подл вес РЦ"
    },
    "chicken_leg": {
@@ -1083,7 +1086,7 @@
     "size": "w",
     "price": 285,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BE%D0%BA%D0%BE%D1%80%D0%BE%D1%87%D0%BA%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Окорочка куриные заморож ГОСТ вес"
    },
    "fish": {
@@ -1091,7 +1094,7 @@
     "size": 600,
     "price": 475,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BC%D0%B8%D0%BD%D1%82%D0%B0%D0%B9",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Филе минтая Байказан замороженное 600г"
    },
    "tuna": {
@@ -1099,7 +1102,7 @@
     "size": 240,
     "price": 255,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%82%D1%83%D0%BD%D0%B5%D1%86",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Натуральная тунец, 240г"
    },
    "eggs": {
@@ -1107,7 +1110,7 @@
     "size": 550,
     "price": 182,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%8F%D0%B9%D1%86%D0%BE",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Яйцо куриное Фермико Премиум 10шт С1"
    },
    "milk": {
@@ -1115,7 +1118,7 @@
     "size": 1000,
     "price": 67,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BC%D0%BE%D0%BB%D0%BE%D0%BA%D0%BE",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Молоко Умут и К 2,5% 1л"
    },
    "kefir": {
@@ -1123,7 +1126,7 @@
     "size": 1000,
     "price": 68,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BA%D0%B5%D1%84%D0%B8%D1%80",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Кефир Умут и К 2,5% 1000г т/п"
    },
    "tvorog": {
@@ -1131,7 +1134,7 @@
     "size": 180,
     "price": 104,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%82%D0%B2%D0%BE%D1%80%D0%BE%D0%B3",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Творог 7 Утра 5% 180г"
    },
    "yogurt": {
@@ -1139,7 +1142,7 @@
     "size": 250,
     "price": 99,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%B9%D0%BE%D0%B3%D1%83%D1%80%D1%82%20%D0%B3%D1%80%D0%B5%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B9",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Биойогурт 7 Утра 2% греческий 250г"
    },
    "smetana": {
@@ -1147,7 +1150,7 @@
     "size": 500,
     "price": 79,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%81%D0%BC%D0%B5%D1%82%D0%B0%D0%BD%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Сметана Умут и К 20% 500мл т/п"
    },
    "butter": {
@@ -1155,7 +1158,7 @@
     "size": 200,
     "price": 145.5,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BC%D0%B0%D1%81%D0%BB%D0%BE%20%D1%81%D0%BB%D0%B8%D0%B2%D0%BE%D1%87%D0%BD%D0%BE%D0%B5",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Масло сливочное Белая Река Крестьянское 72,5% 200г Кант Сүт"
    },
    "kaymak": {
@@ -1163,7 +1166,7 @@
     "size": 250,
     "price": 65,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BA%D0%B0%D0%B9%D0%BC%D0%B0%D0%BA",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Каймак Умут и К 40% 250г ЗМЖ"
    },
    "ayran": {
@@ -1171,7 +1174,7 @@
     "size": 920,
     "price": 110,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%B0%D0%B9%D1%80%D0%B0%D0%BD",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Айран Белая река домашний 3,2% 920г ведро"
    },
    "rice": {
@@ -1179,7 +1182,7 @@
     "size": "w",
     "price": 89,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%80%D0%B8%D1%81",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Рис Краснодарский ТУ весовой фасованный"
    },
    "rice_long": {
@@ -1187,7 +1190,7 @@
     "size": "w",
     "price": 139,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%80%D0%B8%D1%81",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Рис Пакистанский весовой"
    },
    "buckwheat": {
@@ -1195,7 +1198,7 @@
     "size": "w",
     "price": 73.9,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%B3%D1%80%D0%B5%D1%87%D0%BA%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Гречка весовая фасованная"
    },
    "oats": {
@@ -1203,7 +1206,7 @@
     "size": "w",
     "price": 102,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%B3%D0%B5%D1%80%D0%BA%D1%83%D0%BB%D0%B5%D1%81",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Хлопья Геркулес овсяный вес"
    },
    "pasta": {
@@ -1211,7 +1214,7 @@
     "size": 400,
     "price": 68.3,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BC%D0%B0%D0%BA%D0%B0%D1%80%D0%BE%D0%BD%D1%8B",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Макароны Береке витки 400г"
    },
    "noodles": {
@@ -1255,14 +1258,15 @@
     "price": 117.5,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BC%D1%83%D0%BA%D0%B0",
     "checked": "2026-11-23",
-    "match": "Мука Orion высший сорт 2кг"
+    "match": "Мука Orion высший сорт 2кг",
+    "stale": true
    },
    "millet": {
     "name": "Пшено весовое",
     "size": "w",
     "price": 82,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BF%D1%88%D0%B5%D0%BD%D0%BE",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Пшено весовое"
    },
    "semolina": {
@@ -1270,7 +1274,7 @@
     "size": 700,
     "price": 69.3,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BC%D0%B0%D0%BD%D0%BD%D0%B0%D1%8F",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Крупа манная Алтайская сказка 700г"
    },
    "bread_rye": {
@@ -1278,7 +1282,7 @@
     "size": 500,
     "price": 75,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%85%D0%BB%D0%B5%D0%B1",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Хлеб Кут Нан Столичный Ржаной 500г"
    },
    "potato": {
@@ -1286,7 +1290,7 @@
     "size": "w",
     "price": 46,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BA%D0%B0%D1%80%D1%82%D0%BE%D1%84%D0%B5%D0%BB%D1%8C%20%D1%81%D0%B2%D0%B5%D0%B6%D0%B8%D0%B9",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Свежий Картофель, 1кг"
    },
    "onion": {
@@ -1294,7 +1298,7 @@
     "size": "w",
     "price": 43,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BB%D1%83%D0%BA%20%D1%81%D0%B2%D0%B5%D0%B6%D0%B8%D0%B9",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Generic Лук Свежий 1кг"
    },
    "carrot": {
@@ -1302,7 +1306,7 @@
     "size": "w",
     "price": 34,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BC%D0%BE%D1%80%D0%BA%D0%BE%D0%B2%D1%8C",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Морковь мытая"
    },
    "sauerkraut": {
@@ -1316,9 +1320,9 @@
    "tomato": {
     "name": "Помидоры",
     "size": "w",
-    "price": 154,
+    "price": 144,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BF%D0%BE%D0%BC%D0%B8%D0%B4%D0%BE%D1%80",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Помидоры"
    },
    "cucumber": {
@@ -1326,7 +1330,7 @@
     "size": "w",
     "price": 253,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BE%D0%B3%D1%83%D1%80%D0%B5%D1%86",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Огурцы Кураж"
    },
    "pepper": {
@@ -1335,31 +1339,31 @@
     "price": 259,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BF%D0%B5%D1%80%D0%B5%D1%86",
     "checked": "2026-11-23",
-    "match": "Перец Испанский красный"
+    "match": "Перец Испанский красный",
+    "stale": true
    },
    "eggplant": {
     "name": "Баклажаны",
     "size": "w",
     "price": 173,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%B1%D0%B0%D0%BA%D0%BB%D0%B0%D0%B6%D0%B0%D0%BD",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Баклажаны"
    },
    "pumpkin": {
     "name": "Оранжевая Тыква, 1кг",
     "size": "w",
-    "price": 35,
+    "price": 45,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%82%D1%8B%D0%BA%D0%B2%D0%B0%20%D0%BE%D1%80%D0%B0%D0%BD%D0%B6%D0%B5%D0%B2%D0%B0%D1%8F",
-    "checked": "2026-11-22",
-    "match": "Оранжевая Тыква, 1кг",
-    "stale": true
+    "checked": "2026-11-24",
+    "match": "Оранжевая Тыква, 1кг"
    },
    "beet": {
     "name": "Свекла",
     "size": "w",
     "price": 38,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%81%D0%B2%D0%B5%D0%BA%D0%BB%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Свекла"
    },
    "radish": {
@@ -1367,7 +1371,7 @@
     "size": "w",
     "price": 29,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%80%D0%B5%D0%B4%D1%8C%D0%BA%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Редька"
    },
    "broccoli": {
@@ -1375,7 +1379,7 @@
     "size": "w",
     "price": 159,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%B1%D1%80%D0%BE%D0%BA%D0%BA%D0%BE%D0%BB%D0%B8",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Капуста Брокколи"
    },
    "veg_mix": {
@@ -1383,7 +1387,7 @@
     "size": 400,
     "price": 153,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BE%D0%B2%D0%BE%D1%89%D0%B8%20vici",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Смесь овощная И зимой и летом Рагу из 8 овощей замороженная 400г"
    },
    "corn": {
@@ -1391,7 +1395,7 @@
     "size": 400,
     "price": 104,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BA%D1%83%D0%BA%D1%83%D1%80%D1%83%D0%B7%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Кукуруза Sparco ТУ консервированная 400г"
    },
    "garlic": {
@@ -1399,7 +1403,7 @@
     "size": "w",
     "price": 110,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%87%D0%B5%D1%81%D0%BD%D0%BE%D0%BA",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Чеснок"
    },
    "greens": {
@@ -1407,7 +1411,7 @@
     "size": 50,
     "price": 23,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%83%D0%BA%D1%80%D0%BE%D0%BF",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Петрушка"
    },
    "apple": {
@@ -1415,7 +1419,7 @@
     "size": "w",
     "price": 65,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%8F%D0%B1%D0%BB%D0%BE%D0%BA%D0%B8",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Generic Яблоки (Весовые)"
    },
    "banana": {
@@ -1423,7 +1427,7 @@
     "size": "w",
     "price": 167.5,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%B1%D0%B0%D0%BD%D0%B0%D0%BD%D1%8B",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Бананы высший сорт"
    },
    "mandarin": {
@@ -1431,7 +1435,7 @@
     "size": "w",
     "price": 143,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BC%D0%B0%D0%BD%D0%B4%D0%B0%D1%80%D0%B8%D0%BD%D1%8B",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Мандарины"
    },
    "lemon": {
@@ -1439,7 +1443,7 @@
     "size": "w",
     "price": 124,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BB%D0%B8%D0%BC%D0%BE%D0%BD",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Лимоны вес"
    },
    "berries": {
@@ -1447,7 +1451,7 @@
     "size": 200,
     "price": 179,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%8F%D0%B3%D0%BE%D0%B4%D1%8B",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Малина заморож 200г Перетятько"
    },
    "oil": {
@@ -1455,7 +1459,7 @@
     "size": 1840,
     "price": 387.5,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BC%D0%B0%D1%81%D0%BB%D0%BE%20%D0%BF%D0%BE%D0%B4%D1%81%D0%BE%D0%BB%D0%BD%D0%B5%D1%87%D0%BD%D0%BE%D0%B5",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Масло подсолнечное Аведовъ 2л"
    },
    "tomato_paste": {
@@ -1463,7 +1467,7 @@
     "size": 500,
     "price": 113,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BF%D0%B0%D1%81%D1%82%D0%B0%20%D1%82%D0%BE%D0%BC%D0%B0%D1%82%D0%BD%D0%B0%D1%8F",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Паста томатная Сары-Озон 500г"
    },
    "soy_sauce": {
@@ -1471,7 +1475,7 @@
     "size": 550,
     "price": 139,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%81%D0%BE%D1%83%D1%81%20%D1%81%D0%BE%D0%B5%D0%B2%D1%8B%D0%B9",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Соус соевый Тама классич 550мл"
    },
    "honey": {
@@ -1479,7 +1483,7 @@
     "size": 550,
     "price": 358,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BC%D0%B5%D0%B4",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Мед Цветочный Филатов 550г"
    },
    "peanut_butter": {
@@ -1487,7 +1491,7 @@
     "size": 300,
     "price": 262,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%B0%D1%80%D0%B0%D1%85%D0%B8%D1%81%D0%BE%D0%B2%D0%B0%D1%8F%20%D0%BF%D0%B0%D1%81%D1%82%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Паста арахисовая Runner 300г"
    },
    "starch": {
@@ -1495,7 +1499,7 @@
     "size": 200,
     "price": 76,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BA%D1%80%D0%B0%D1%85%D0%BC%D0%B0%D0%BB",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Крахмал кукурузный Татымал 200г"
    },
    "vinegar": {
@@ -1503,7 +1507,7 @@
     "size": 300,
     "price": 65,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%83%D0%BA%D1%81%D1%83%D1%81",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Уксус Татым пищ. 9% 300мл п/б"
    },
    "tea": {
@@ -1511,7 +1515,7 @@
     "size": 200,
     "price": 279.5,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%87%D0%B0%D0%B9%20%D1%87%D0%B5%D1%80%D0%BD%D1%8B%D0%B9",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Чай Tess Sunrise листовой 200г"
    },
    "pelmeni": {
@@ -1519,7 +1523,7 @@
     "size": 400,
     "price": 141,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D0%BF%D0%B5%D0%BB%D1%8C%D0%BC%D0%B5%D0%BD%D0%B8",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Пельмени Атаман Фирменные 400г"
    },
    "chuchvara": {
@@ -1527,7 +1531,7 @@
     "size": 400,
     "price": 150,
     "url": "https://glovoapp.com/ru/kg/bishkek/stores/spar-bsk?search=%D1%87%D1%83%D1%87%D0%B2%D0%B0%D1%80%D0%B0",
-    "checked": "2026-11-23",
+    "checked": "2026-11-24",
     "match": "Чучвара Атаман Фирменная 400г"
    }
   }
